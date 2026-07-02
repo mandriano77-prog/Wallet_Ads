@@ -1984,6 +1984,7 @@
                         </div>
                         <button class="btn" style="width:100%;font-weight:700;margin-top:12px;" onclick="saveGeofencing()" id="geoSaveBtn">&#128205; Salva e Aggiorna Pass</button>
                         <p id="geoSaveStatus" style="font-size:12px;color:var(--text2);margin-top:8px;text-align:left;line-height:1.45;"></p>
+                        <div id="geoDiagnostics" class="geo-diagnostics" hidden style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-subtle);font-size:12px;line-height:1.5;color:var(--text2);"></div>
                     </div>
                 </div>
 
@@ -8769,6 +8770,24 @@ function renderGeoLocations() {
     }).join('');
 }
 
+async function renderGeoDiagnostics(diagnostics) {
+    const el = document.getElementById('geoDiagnostics');
+    if (!el) return;
+    if (!diagnostics || !diagnostics.notes?.length) {
+        el.hidden = true;
+        el.innerHTML = '';
+        return;
+    }
+    el.hidden = false;
+    const lines = [
+        '<strong>Diagnostica geofencing</strong>',
+        `POI dashboard: ${diagnostics.dashboard_pois ?? 0} · nel pass Apple: ${diagnostics.apple_locations_in_pass ?? 0} · Google merchantLocations: ${diagnostics.google_merchant_locations ?? 0}`,
+        `Raggio Apple effettivo: ${diagnostics.effective_max_distance_m ?? '—'} m · iPhone registrati: ${diagnostics.apple_devices ?? 0}`,
+    ];
+    lines.push('<ul style="margin:8px 0 0;padding-left:18px;">' + diagnostics.notes.map((n) => `<li>${esc(n)}</li>`).join('') + '</ul>');
+    el.innerHTML = lines.join('<br>');
+}
+
 async function loadGeofencing() {
     if (!brandId) return;
     try {
@@ -8783,6 +8802,7 @@ async function loadGeofencing() {
         if (geoChannelEl) geoChannelEl.value = 'all';
         renderGeoLocations();
         enrichGeoAddressesFromCoords();
+        await renderGeoDiagnostics(data.diagnostics);
     } catch (e) { console.error('Load geofencing error:', e); }
 }
 
@@ -8832,6 +8852,7 @@ async function saveGeofencing() {
             : 'Google: nessun oggetto Wallet salvato da aggiornare.';
         statusEl.innerHTML = `Salvato: ${geoLocations.length} POI configurati. Apple: ${passesTouched}/${passCount} pass aggiornati, ${appleSent}/${appleDevices} device notificati${appleErrorText}. ${googleText}${appleWarning}`;
         statusEl.style.color = 'var(--green)';
+        await renderGeoDiagnostics(data.diagnostics);
         toast('Geofencing salvato.');
         await loadGeofencing();
     } catch (e) {

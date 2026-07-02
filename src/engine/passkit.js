@@ -242,33 +242,6 @@ function colorToRgbString(color) {
   return `rgb(${c.r}, ${c.g}, ${c.b})`;
 }
 
-/**
- * Apple: max 10 locations per pass; invalid coordinates must not appear in pass.json.
- * @param {Record<string, unknown>} brandConfig
- * @returns {{ latitude: number, longitude: number, relevantText?: string, altitude?: number }[]}
- */
-function normalizePassLocations(brandConfig) {
-  const raw = brandConfig.locations;
-  if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
-  const out = [];
-  for (const loc of raw) {
-    if (out.length >= 10) break;
-    const latitude = parseFloat(/** @type {{ latitude?: unknown }} */ (loc).latitude);
-    const longitude = parseFloat(/** @type {{ longitude?: unknown }} */ (loc).longitude);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) continue;
-    const entry = { latitude, longitude };
-    const rt = loc.relevantText;
-    if (rt != null && String(rt).trim()) entry.relevantText = String(rt).trim().slice(0, 200);
-    if (loc.altitude != null && loc.altitude !== '') {
-      const alt = parseFloat(loc.altitude);
-      if (Number.isFinite(alt)) entry.altitude = alt;
-    }
-    out.push(entry);
-  }
-  return out;
-}
-
 /** Map template back-field keys to link slot index 0..2 (Link 1–3). */
 function backFieldLinkSlotIndex(key) {
   const k = String(key || '').toLowerCase();
@@ -374,20 +347,13 @@ function resolveTemplateLinkSlots(tplFields) {
 }
 
 function mergePassLocationSources(brandLocations, hubLocations) {
-  const combined = [...(hubLocations || []), ...(brandLocations || [])];
-  const seen = new Set();
-  const out = [];
-  for (const loc of combined) {
-    const lat = parseFloat(loc.latitude);
-    const lon = parseFloat(loc.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-    const key = `${lat.toFixed(5)}:${lon.toFixed(5)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(loc);
-    if (out.length >= 10) break;
-  }
-  return out;
+  const { mergeGeofenceLocationSources } = require('./geofencing');
+  return mergeGeofenceLocationSources(brandLocations, hubLocations);
+}
+
+function normalizePassLocations(brandConfig) {
+  const { normalizePassLocations: normalize } = require('./geofencing');
+  return normalize(brandConfig);
 }
 
 /**
@@ -694,17 +660,9 @@ function generatePassJson(template, instance, brand, options = {}) {
     passJson.relevantDate = brandConfig.relevantDate;
   }
 
-  // maxDistance (m): explicit brand maxDistance, else largest POI radius, else 500. Clamp to sane range.
-  let maxRadius = 500;
-  if (brandConfig.locations && Array.isArray(brandConfig.locations)) {
-    brandConfig.locations.forEach((loc) => {
-      const r = parseInt(String(loc.radius), 10);
-      if (Number.isFinite(r) && r > maxRadius) maxRadius = r;
-    });
-  }
-  let maxDistanceM = parseInt(String(brandConfig.maxDistance), 10);
-  if (!Number.isFinite(maxDistanceM) || maxDistanceM < 1) maxDistanceM = maxRadius;
-  maxDistanceM = Math.min(Math.max(maxDistanceM, 1), 100000);
+  // maxDistance (m): explicit brand maxDistance, else largest POI radius, else 500.
+  const { resolveEffectiveMaxDistanceM } = require('./geofencing');
+  const maxDistanceM = resolveEffectiveMaxDistanceM(brandConfig);
   if (normalizedLocs.length > 0) {
     passJson.maxDistance = maxDistanceM;
   }
@@ -1241,7 +1199,7 @@ async function createPkpass(template, instance, brand, options = {}) {
   if (hrBrand && instance?.serial_number && (process.env.JWT_HUB_SECRET || process.env.JWT_SECRET)) {
     try {
       const { signHubToken, buildHubUrl, buildHubAppUrl } = require('./hub-jwt');
-      const { listMerchantGeofenceLocationsForBrand, getPgaSettings } = require('../db');
+      const { listMerchantGeofenceLocationsForBrand, getPgaSettings, getHubSettings } = require('../db');
       const userId = member?.id || instance.member_id || null;
       const token = signHubToken({
         user_id: userId,
@@ -1250,7 +1208,10 @@ async function createPkpass(template, instance, brand, options = {}) {
       });
       hubUrl = buildHubUrl(token, brand.slug);
       meUrl = buildHubAppUrl(token, brand.slug, 'me');
-      hubLocations = await listMerchantGeofenceLocationsForBrand(brand.id);
+      const hubSettings = await getHubSettings(brand.id);
+      if (hubSettings.geofencing_enabled !== false) {
+        hubLocations = await listMerchantGeofenceLocationsForBrand(brand.id);
+      }
       const pgaSettings = await getPgaSettings(brand.id);
       if (pgaSettings.enabled) {
         pgaUrl = buildHubAppUrl(token, brand.slug, 'pga');
@@ -1485,5 +1446,6 @@ module.exports = {
   generateManifest,
   signManifest,
   createPkpass,
-  generateDefaultImages
+  generateDefaultImages,
+  normalizePassLocations,
 };

@@ -53,8 +53,11 @@ const {
   getAudience,
   listAudiences,
   updateAudience,
-  deleteAudience
+  deleteAudience,
+  getHubSettings,
+  listMerchantGeofenceLocationsForBrand
 } = require('../db');
+const { buildGeofenceDiagnostics } = require('../engine/geofencing');
 const {
   getPassHoldersInsights,
   countAudienceMembers,
@@ -3093,11 +3096,21 @@ router.get('/brands/:id/geofencing', async (req, res) => {
     const brand = await getBrand(req.params.id);
     if (!brand) return res.status(404).json({ error: 'Brand not found' });
     const locations = brand.config?.locations || [];
-    const [passRows, appleDevices] = await Promise.all([
+    const [passRows, appleDevices, hubSettings, hubMerchantLocations] = await Promise.all([
       pool.query('SELECT id, google_wallet_object_id FROM pass_instances WHERE brand_id = $1', [req.params.id]),
-      getDevicesForBrand(req.params.id)
+      getDevicesForBrand(req.params.id),
+      getHubSettings(req.params.id),
+      listMerchantGeofenceLocationsForBrand(req.params.id),
     ]);
     const googleObjects = passRows.rows.filter((p) => !!p.google_wallet_object_id).length;
+    const diagnostics = buildGeofenceDiagnostics({
+      brandConfig: brand.config || {},
+      hubSettings,
+      hubMerchantLocations,
+      appleDevices: appleDevices.length,
+      googleObjects,
+      passCount: passRows.rowCount || 0,
+    });
     res.json({
       locations,
       maxDistance: brand.config?.maxDistance || 500,
@@ -3105,7 +3118,8 @@ router.get('/brands/:id/geofencing', async (req, res) => {
       diagnostics: {
         passes: passRows.rowCount || 0,
         apple_devices: appleDevices.length,
-        google_objects: googleObjects
+        google_objects: googleObjects,
+        ...diagnostics,
       }
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -3196,6 +3210,17 @@ router.put('/brands/:id/geofencing', async (req, res) => {
       samsungSync = await notifySamsungSavedPasses(passRows.rows);
     }
 
+    const hubSettings = await getHubSettings(req.params.id);
+    const hubMerchantLocations = await listMerchantGeofenceLocationsForBrand(req.params.id);
+    const diagnostics = buildGeofenceDiagnostics({
+      brandConfig: config,
+      hubSettings,
+      hubMerchantLocations,
+      appleDevices: appleDeviceCount,
+      googleObjects: passRows.rows.filter((p) => !!p.google_wallet_object_id).length,
+      passCount: passes.rowCount || 0,
+    });
+
     res.json({
       success: true,
       channel,
@@ -3211,7 +3236,8 @@ router.put('/brands/:id/geofencing', async (req, res) => {
         passes_touched: passTouch.touched || 0
       },
       google: googleSync,
-      samsung: samsungSync
+      samsung: samsungSync,
+      diagnostics,
     });
   } catch (err) { res.status(err.statusCode || 500).json({ error: err.message }); }
 });

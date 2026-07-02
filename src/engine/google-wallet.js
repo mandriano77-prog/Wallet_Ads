@@ -300,24 +300,8 @@ function createSaveJWT(classObject, passObject, brand) {
 // ── Pass Class (template) ─────────────────────────────────────────────
 
 function normalizeMerchantLocations(brandConfig) {
-  const raw = brandConfig?.locations;
-  if (!Array.isArray(raw) || raw.length === 0) return [];
-
-  const locations = [];
-  const seen = new Set();
-  for (const loc of raw) {
-    if (locations.length >= 10) break;
-    const latitude = parseFloat(loc?.latitude);
-    const longitude = parseFloat(loc?.longitude);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) continue;
-
-    const key = `${latitude.toFixed(5)}:${longitude.toFixed(5)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    locations.push({ latitude, longitude });
-  }
-  return locations;
+  const { normalizeGoogleMerchantLocations } = require('./geofencing');
+  return normalizeGoogleMerchantLocations(brandConfig);
 }
 
 /**
@@ -611,6 +595,8 @@ async function buildPassObject(brand, template, instance, memberHint) {
         linksModuleData: { uris: [] }
       };
     Object.assign(obj, objectPatch);
+    const merchantLocations = normalizeMerchantLocations(brand?.config || {});
+    if (merchantLocations.length) obj.merchantLocations = merchantLocations;
     logWalletDebug('buildPassObject', {
       passKind,
       objectId,
@@ -718,6 +704,9 @@ async function buildPassObject(brand, template, instance, memberHint) {
     textModulesCount: obj.textModulesData.length,
     linksCount: obj.linksModuleData?.uris?.length || 0
   });
+
+  const merchantLocations = normalizeMerchantLocations(brand?.config || {});
+  if (merchantLocations.length) obj.merchantLocations = merchantLocations;
 
   return obj;
 }
