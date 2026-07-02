@@ -42,8 +42,8 @@ function resolveWalletAlertChangeMessage(employeePass) {
   if (frontAlert) {
     const value = String(frontAlert.value || '').replace(/[\u200b\u200c\u200d\u2060]/g, '').trim();
     const changeMessage = String(frontAlert.changeMessage || '').trim();
-    if (changeMessage === '%@') return value;
-    if (changeMessage) return changeMessage;
+    // iOS substitutes %@ with the (invisible) field value — render what the device shows.
+    if (changeMessage) return changeMessage.replace(/%@/g, value).trim();
     return value;
   }
   if (employeePass.headerHint?.changeMessage) return String(employeePass.headerHint.changeMessage).trim();
@@ -144,6 +144,7 @@ async function buildPushPassPreview({ brand, template, body = {} }) {
     key: f.key,
     label: f.label,
     value: String(f.value || '').replace(/[\u200b\u200c\u200d\u2060]/g, ''),
+    changeMessage: f.changeMessage || null,
   }));
 
   return {

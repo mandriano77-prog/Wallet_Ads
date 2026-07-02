@@ -116,7 +116,7 @@ test('Apple HR pass applies Wallet lock-screen copy on changed front announcemen
   assert.match(employeePass, /function buildPushAnnouncementAuxField/);
   assert.match(employeePass, /changeMessage/);
   assert.match(employeePass, /key: 'announcement'/);
-  assert.match(employeePass, /changeMessage: '%@'/);
+  assert.match(employeePass, /changeMessage: `\$\{alertText\}%@`/);
   assert.doesNotMatch(employeePass, /key: 'wallet_push_alert'/);
   assert.doesNotMatch(employeePass, /key: 'screen_alert'/);
   assert.match(employeePass, /key: 'push_back_details'/);

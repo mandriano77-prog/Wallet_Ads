@@ -202,17 +202,20 @@ function buildPushScreenAlertAuxField(pushAnn) {
  * Apple Wallet update banners are driven by changeMessage on a changed pass
  * front field. Back fields update silently, and header fields have proven
  * unreliable on device for custom lock-screen copy.
+ *
+ * The value is an invisible token (changes each push, no visible 4th column);
+ * the alert copy lives in the changeMessage template. iOS requires %@ in
+ * changeMessage — it substitutes the (invisible) value, so only the copy shows.
  */
 function buildPushAnnouncementAuxField(pushAnn) {
-  const changeMessage = buildPushChangeMessage(pushAnn);
-  if (!changeMessage) return null;
+  const alertText = buildPushChangeMessage(pushAnn);
+  if (!alertText) return null;
   const pushTs = Number(pushAnn?.ts || Date.now());
-  const token = invisibleChangeToken(pushTs).slice(0, 10);
   return {
     key: 'announcement',
-    label: 'AGGIORNAMENTO',
-    value: `${changeMessage}${token}`,
-    changeMessage: '%@'
+    label: '',
+    value: invisibleChangeToken(pushTs).slice(0, 12),
+    changeMessage: `${alertText}%@`
   };
 }
 
@@ -586,12 +589,16 @@ function sectionsToAppleBackFields(sections) {
   const fields = [];
   for (const s of sections) {
     if (s.kind === 'alert') {
-      fields.push({
+      const field = {
         key: s.key,
         label: String(s.label ?? ' ').slice(0, 64),
-        value: String(s.body || '').slice(0, 500),
-        changeMessage: String(s.changeMessage || '').slice(0, 178)
-      });
+        value: String(s.body || '').slice(0, 500)
+      };
+      // Empty changeMessage (no %@) makes iOS fall back to the generic
+      // "Carta punto vendita modificata" banner when the field changes.
+      const cm = String(s.changeMessage || '').slice(0, 180);
+      if (cm) field.changeMessage = cm;
+      fields.push(field);
       continue;
     }
     if (s.kind === 'link') {

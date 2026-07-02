@@ -8345,8 +8345,6 @@ function toggleSchedOptions() {
 }
 
 async function createScheduledPush() {
-    const title = (document.getElementById('schedTitle')?.value || '').trim() || DEFAULT_PUSH_TITLE;
-    const message = (document.getElementById('schedMessage')?.value || '').trim() || DEFAULT_PUSH_MESSAGE;
     const campaignId = isLegacyCampaignsUiEnabled()
         ? (document.getElementById('schedCampaignTarget')?.value || null)
         : null;
@@ -8367,6 +8365,10 @@ async function createScheduledPush() {
         return;
     }
     setPushFieldError('schedScreenAlert', '');
+    // I campi strip del pannello programmata sono legacy/nascosti: come nella push
+    // immediata, titolo e messaggio ricadono sul testo notifica Wallet.
+    const title = ((document.getElementById('schedTitle')?.value || '').trim() || schedScreenAlert || 'Aggiornamento').slice(0, PUSH_TITLE_MAX);
+    const message = ((document.getElementById('schedMessage')?.value || '').trim() || schedScreenAlert || 'Apri il pass per i dettagli').slice(0, PUSH_MESSAGE_MAX);
     if (!applyPushTextValidation(title, message, (document.getElementById('schedBackDetails')?.value || '').trim(), schedScreenAlert)) return;
 
     const body = { brand_id: brandId, title, message, screen_alert: schedScreenAlert, update_pass: updatePass, channel, schedule_type: schedType, schedule_time: time };

@@ -35,17 +35,17 @@ function visiblePassValue(value) {
 
 // ── 1. Meccanismo notifica lock screen (front announcement + changeMessage %@) ──
 
-test('LOCK: alert Wallet su campo front announcement con changeMessage %@', () => {
+test('LOCK: alert Wallet su campo front announcement con changeMessage template %@', () => {
   const src = read('src/engine/employee-pass.js');
   assert.match(src, /function buildPushAnnouncementAuxField/);
   assert.match(src, /key: 'announcement'/);
-  assert.match(src, /changeMessage: '%@'/);
+  assert.match(src, /changeMessage: `\$\{alertText\}%@`/);
   // Vietato tornare agli approcci falliti: aux screen_alert / back wallet_push_alert.
   assert.doesNotMatch(src, /key: 'screen_alert'/);
   assert.doesNotMatch(src, /key: 'wallet_push_alert'/);
 });
 
-test('LOCK: buildEmployeePass mette il testo screen_alert sul campo announcement', () => {
+test('LOCK: announcement con valore invisibile e testo nel changeMessage', () => {
   const { buildEmployeePass, toApplePass } = require('../src/engine/employee-pass');
   const ep = buildEmployeePass({
     brand: { id: 'b1', name: 'NTI', slug: 'nti', config: {} },
@@ -65,13 +65,48 @@ test('LOCK: buildEmployeePass mette il testo screen_alert sul campo announcement
   const apple = toApplePass(ep);
   const alert = (apple.passStructure.auxiliaryFields || []).find((f) => f.key === 'announcement');
   assert.ok(alert, 'campo announcement mancante: la notifica custom non parte');
-  assert.equal(alert.changeMessage, '%@');
-  assert.equal(visiblePassValue(alert.value), '2X1 OCCHIALI: Solo questa settimana');
-  // Il valore deve cambiare a ogni push (token invisibile legato al ts).
-  assert.notEqual(alert.value, visiblePassValue(alert.value));
+  // changeMessage DEVE contenere %@ (iOS lo esige) preceduto dal testo screen_alert.
+  assert.equal(alert.changeMessage, '2X1 OCCHIALI: Solo questa settimana%@');
+  // Nessuna 4ª colonna visibile: valore = solo token invisibile che cambia col ts.
+  assert.equal(visiblePassValue(alert.value), '');
+  assert.ok(alert.value.length > 0, 'serve un valore che cambia per far scattare la notifica');
+  assert.equal(alert.label, '');
   // Il COIN mantiene il proprio changeMessage dedicato.
   const coin = (apple.passStructure.secondaryFields || []).find((f) => f.key === 'coin_balance');
   assert.equal(coin.changeMessage, 'Hai %@ coin');
+});
+
+test('LOCK: i campi retro non hanno mai changeMessage vuoto (causa notifica generica)', () => {
+  const { buildBackSections, sectionsToAppleBackFields } = require('../src/engine/employee-pass');
+  const sections = buildBackSections({
+    brand: { hr_email: 'supporto@nti.it' },
+    template: {},
+    instance: {
+      dynamic_link_url: 'https://example.com/offerta',
+      dynamic_link_label: 'Vai all\'offerta',
+      dynamic_link_expires_at: new Date(Date.now() + 86400000).toISOString(),
+      push_announcement: {
+        title: '2x1 OCCHIALI',
+        message: 'Solo questa settimana',
+        screen_alert: '2X1 OCCHIALI: Solo questa settimana',
+        back_details: 'Non cumulabile. Valido fino al 31/12.',
+        ts: 1710000000001,
+      },
+    },
+    member: {},
+    hubUrl: 'https://studio.example.com/hub/conv?token=t',
+    portalUrl: 'https://studio.example.com/portal/?t=t',
+  });
+  const backFields = sectionsToAppleBackFields(sections);
+  backFields.forEach((f) => {
+    if ('changeMessage' in f) {
+      assert.ok(String(f.changeMessage).length > 0, `campo retro ${f.key} con changeMessage vuoto`);
+      assert.match(String(f.changeMessage), /%@/, `campo retro ${f.key}: changeMessage senza %@`);
+    }
+  });
+  const details = backFields.find((f) => f.key === 'push_back_details');
+  assert.ok(details);
+  assert.equal('changeMessage' in details, false, 'push_back_details deve aggiornarsi in silenzio');
 });
 
 test('LOCK: senza push attiva nessun campo announcement sul fronte', () => {

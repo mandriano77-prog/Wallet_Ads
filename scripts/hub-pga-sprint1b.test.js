@@ -128,8 +128,9 @@ test('HR push promo: strip overlay only — frozen template header and secondary
   const apple = toApplePass(employeePass);
   const alertField = (apple.passStructure.auxiliaryFields || []).find((f) => f.key === 'announcement');
   assert.ok(alertField);
-  assert.equal(alertField.changeMessage, '%@');
-  assert.equal(visiblePassValue(alertField.value), 'FRATELLI LA PIZZA: Dal lunedì al venerdì, con il pass hai lo sconto del 20%');
+  assert.equal(alertField.changeMessage, 'FRATELLI LA PIZZA: Dal lunedì al venerdì, con il pass hai lo sconto del 20%%@');
+  assert.equal(visiblePassValue(alertField.value), '');
+  assert.ok(alertField.value.length > 0);
   assert.equal((apple.passStructure.headerFields || []).find((f) => f.key === 'info_hint'), undefined);
   assert.equal((apple.passStructure.auxiliaryFields || []).find((f) => f.key === 'wallet_push_alert'), undefined);
   assert.equal((apple.passStructure.backFields || []).find((f) => f.key === 'wallet_push_alert'), undefined);
@@ -179,8 +180,8 @@ test('HR push default copy uses back details for Apple alert and no INFO PASS ba
   const apple = toApplePass(employeePass);
   const alertField = (apple.passStructure.auxiliaryFields || []).find((f) => f.key === 'announcement');
   assert.ok(alertField);
-  assert.equal(alertField.changeMessage, '%@');
-  assert.equal(visiblePassValue(alertField.value), 'Lorem Ipsum tutti i brand aderenti, sconti fino al 50%');
+  assert.equal(alertField.changeMessage, 'Lorem Ipsum tutti i brand aderenti, sconti fino al 50%%@');
+  assert.equal(visiblePassValue(alertField.value), '');
   assert.equal((apple.passStructure.headerFields || []).find((f) => f.key === 'info_hint'), undefined);
   assert.equal((apple.passStructure.auxiliaryFields || []).find((f) => f.key === 'wallet_push_alert'), undefined);
   assert.equal((apple.passStructure.backFields || []).find((f) => f.key === 'wallet_push_alert'), undefined);
@@ -312,8 +313,9 @@ test('HR push: lock-screen alert on changed front announcement field, without nu
   assert.equal(ep.headerHint, null);
   const alert = ep.front.auxiliary.find((s) => s.key === 'announcement');
   assert.ok(alert);
-  assert.equal(alert.changeMessage, '%@');
-  assert.equal(visiblePassValue(alert.value), '2X1 OCCHIALI: Solo questa settimana');
+  assert.equal(alert.changeMessage, '2X1 OCCHIALI: Solo questa settimana%@');
+  assert.equal(visiblePassValue(alert.value), '');
+  assert.ok(alert.value.length > 0);
   assert.equal(ep.backSections.find((s) => s.key === 'wallet_push_alert'), undefined);
   const coin = ep.front.secondary.find((f) => f.key === 'coin_balance');
   assert.ok(coin);
@@ -321,8 +323,8 @@ test('HR push: lock-screen alert on changed front announcement field, without nu
   const apple = toApplePass(ep);
   const appleAlert = (apple.passStructure.auxiliaryFields || []).find((f) => f.key === 'announcement');
   assert.ok(appleAlert);
-  assert.equal(appleAlert.changeMessage, '%@');
-  assert.equal(visiblePassValue(appleAlert.value), '2X1 OCCHIALI: Solo questa settimana');
+  assert.equal(appleAlert.changeMessage, '2X1 OCCHIALI: Solo questa settimana%@');
+  assert.equal(visiblePassValue(appleAlert.value), '');
   assert.equal((apple.passStructure.headerFields || []).find((f) => f.key === 'info_hint'), undefined);
   assert.equal((apple.passStructure.auxiliaryFields || []).find((f) => f.key === 'wallet_push_alert'), undefined);
   assert.equal((apple.passStructure.backFields || []).find((f) => f.key === 'wallet_push_alert'), undefined);
