@@ -14,3 +14,4 @@ certs/
 *.pem
 *.csr
 wallet-ads-secrets/
+test-results/
