@@ -9,8 +9,20 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const routesSrc = fs.readFileSync(path.join(__dirname, '../src/api/routes.js'), 'utf8');
+// Il protocollo Apple vive nel modulo estratto; routes.js deve montarlo al posto giusto.
+const routesSrc = fs.readFileSync(path.join(__dirname, '../src/api/apple-wallet-protocol.js'), 'utf8');
+const mainRoutesSrc = fs.readFileSync(path.join(__dirname, '../src/api/routes.js'), 'utf8');
 const serverSrc = fs.readFileSync(path.join(__dirname, '../src/server.js'), 'utf8');
+
+test('routes.js monta apple-wallet-protocol prima delle route creative-assets', () => {
+  const mountIdx = mainRoutesSrc.indexOf("router.use(require('./apple-wallet-protocol'))");
+  const creativeIdx = mainRoutesSrc.indexOf("router.get('/creative-assets/:id/image'");
+  const downloadIdx = mainRoutesSrc.indexOf("router.get('/passes/:id/download'");
+  assert.ok(mountIdx > -1, 'mount del sub-router Apple presente');
+  assert.ok(downloadIdx > -1 && downloadIdx < mountIdx,
+    '/passes/:id/download deve restare registrata PRIMA del protocollo Apple (stesso numero di segmenti di /passes/:ptid/:sn)');
+  assert.ok(creativeIdx > mountIdx, 'mount nella posizione originale, prima di creative-assets');
+});
 
 test('routes.js definisce applePassAuthMatches con confronto timing-safe', () => {
   assert.match(routesSrc, /function applePassAuthMatches\(/);
