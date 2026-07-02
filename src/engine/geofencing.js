@@ -37,7 +37,7 @@ function normalizeGoogleMerchantLocations(brandConfig = {}) {
   return normalizePassLocations(brandConfig).map(({ latitude, longitude }) => ({ latitude, longitude }));
 }
 
-function mergeGeofenceLocationSources(brandLocations, hubLocations) {
+function mergeGeofenceLocationSources(brandLocations, hubLocations, limit = APPLE_MAX_POI) {
   const combined = [...(hubLocations || []), ...(brandLocations || [])];
   const seen = new Set();
   const out = [];
@@ -49,7 +49,7 @@ function mergeGeofenceLocationSources(brandLocations, hubLocations) {
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({ ...loc, latitude: lat, longitude: lon });
-    if (out.length >= APPLE_MAX_POI) break;
+    if (out.length >= limit) break;
   }
   return out;
 }
@@ -100,7 +100,22 @@ function buildGeofenceDiagnostics({
   const effectiveMaxDistanceM = resolveEffectiveMaxDistanceM(brandConfig);
   const smallestPoiRadiusM = minPoiRadiusM(brandConfig);
 
+  // Candidati validi senza il tetto Apple: se superano APPLE_MAX_POI il taglio
+  // avviene in silenzio dentro il pass — qui lo rendiamo visibile al manager.
+  const candidatePois = mergeGeofenceLocationSources(
+    brandConfig.locations,
+    geofencingEnabled ? hubMerchantLocations : [],
+    Infinity
+  ).length;
+  const applePoisDropped = Math.max(0, candidatePois - appleLocations.length);
+
   const notes = [];
+  if (applePoisDropped > 0) {
+    notes.push(
+      `⚠️ ${applePoisDropped} POI oltre il limite Apple di ${APPLE_MAX_POI} — esclusi dal pass (priorità: merchant HUB, poi sedi brand, in ordine di inserimento).`
+    );
+    console.warn(`[geofencing] ${candidatePois} POI candidati: ${applePoisDropped} esclusi dal pass Apple (limite ${APPLE_MAX_POI})`);
+  }
   if (!appleLocations.length) {
     notes.push('Nessun POI valido nel pass: aggiungi coordinate e salva di nuovo.');
   } else {
@@ -132,6 +147,8 @@ function buildGeofenceDiagnostics({
     dashboard_pois: dashboardPois,
     hub_merchant_pois: hubMerchantCount,
     apple_locations_in_pass: appleLocations.length,
+    apple_poi_limit: APPLE_MAX_POI,
+    apple_pois_dropped: applePoisDropped,
     google_merchant_locations: googleLocations.length,
     effective_max_distance_m: effectiveMaxDistanceM,
     smallest_poi_radius_m: smallestPoiRadiusM,

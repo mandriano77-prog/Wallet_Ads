@@ -68,3 +68,30 @@ test('generatePassJson still embeds locations for HR brand', () => {
   assert.equal(passJson.locations.length, 1);
   assert.equal(passJson.maxDistance, 50);
 });
+
+test('diagnostics segnala i POI oltre il limite Apple di 10', () => {
+  const many = Array.from({ length: 14 }, (_, i) => ({
+    latitude: 45 + i * 0.01,
+    longitude: 9 + i * 0.01,
+    relevantText: `Sede ${i + 1}`,
+  }));
+  const d = buildGeofenceDiagnostics({
+    brandConfig: { locations: many },
+    hubSettings: { geofencing_enabled: true },
+    hubMerchantLocations: [],
+  });
+  assert.equal(d.apple_locations_in_pass, 10);
+  assert.equal(d.apple_poi_limit, 10);
+  assert.equal(d.apple_pois_dropped, 4);
+  assert.ok(d.notes.some((n) => n.includes('oltre il limite Apple')));
+});
+
+test('diagnostics senza overflow: apple_pois_dropped = 0 e nessuna nota di taglio', () => {
+  const d = buildGeofenceDiagnostics({
+    brandConfig: { locations: [{ latitude: 45.46, longitude: 9.19 }] },
+    hubSettings: { geofencing_enabled: true },
+    hubMerchantLocations: [],
+  });
+  assert.equal(d.apple_pois_dropped, 0);
+  assert.ok(!d.notes.some((n) => n.includes('oltre il limite Apple')));
+});

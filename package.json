@@ -17,7 +17,8 @@
     "gwallet:list": "node scripts/google-wallet-admin.js classes:list"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0"
+    "@playwright/test": "^1.52.0",
+    "esbuild": "^0.28.1"
   },
   "engines": {
     "node": ">=20"

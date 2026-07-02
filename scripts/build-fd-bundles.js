@@ -1,13 +1,25 @@
 #!/usr/bin/env node
 /**
- * Concatena CSS/JS FiloDiretto in bundle singoli (nessuna dipendenza esterna).
- * Uso: node scripts/build-fd-bundles.js
+ * Concatena CSS/JS FiloDiretto in bundle singoli e li minifica con esbuild.
+ * I file JS condividono lo scope globale (nessun module system): l'ordine di
+ * concatenazione è parte del contratto, esbuild fa solo transform (no bundling),
+ * quindi i top-level identifier NON vengono rinominati.
+ *
+ * Output:
+ *   fd.bundle.js        — minificato, con sourceMappingURL
+ *   fd.bundle.js.map    — source map verso fd.bundle.src.js
+ *   fd.bundle.src.js    — concatenazione leggibile (con marker per-file) per il debug
+ *   fd.bundle.css       — minificato
+ *   fd.bundle.manifest.json
+ *
+ * Uso: node scripts/build-fd-bundles.js  (npm run build:fd-bundles)
  */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const esbuild = require('esbuild');
 
 const ROOT = path.join(__dirname, '..');
 const FD = path.join(ROOT, 'src', 'filodiretto');
@@ -30,55 +42,7 @@ const JS_FILES = [
   'fd-rbac.js', 'fd-wallet-ui.js', 'fd-push.js', 'fd-reward-challenge.js', 'fd-analytics.js', 'fd-audiences.js', 'fd-conventions.js', 'fd-pga.js', 'fd-pga-engagement.js', 'fd-activity-log.js', 'fd-responsive-tables.js', 'fd-profile.js',
 ];
 
-function protectCalc(css) {
-  const calcs = [];
-  let result = '';
-  let i = 0;
-  while (i < css.length) {
-    const idx = css.indexOf('calc(', i);
-    if (idx === -1) {
-      result += css.slice(i);
-      break;
-    }
-    result += css.slice(i, idx);
-    let j = idx + 5;
-    let depth = 1;
-    while (j < css.length && depth > 0) {
-      if (css[j] === '(') depth++;
-      else if (css[j] === ')') depth--;
-      j++;
-    }
-    calcs.push(css.slice(idx, j));
-    result += `__CALC_${calcs.length - 1}__`;
-    i = j;
-  }
-  return { css: result, calcs };
-}
-
-function restoreCalc(css, calcs) {
-  return css.replace(/__CALC_(\d+)__/g, (_, n) => calcs[Number(n)]);
-}
-
-function minifyCss(css) {
-  const { css: protectedCss, calcs } = protectCalc(css);
-  const minified = protectedCss
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\s+/g, ' ')
-    .replace(/\s*([{}:;,>+~])\s*/g, '$1')
-    .trim();
-  return restoreCalc(minified, calcs);
-}
-
-function minifyJs(js) {
-  return js
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    // Strip whole-line // comments only — do not touch // inside strings/regex (e.g. https://).
-    .replace(/^\s*\/\/[^\n]*/gm, '')
-    .replace(/\n\s*\n/g, '\n')
-    .trim();
-}
-
-function concat(files, dir, minify) {
+function concat(files, dir) {
   return files.map((f) => {
     const p = path.join(dir, f);
     if (!fs.existsSync(p)) throw new Error('Missing: ' + p);
@@ -86,15 +50,33 @@ function concat(files, dir, minify) {
   }).join('\n\n');
 }
 
-const cssRaw = concat(CSS_FILES, FD, false);
-const jsRaw = concat(JS_FILES, FD, false);
+const cssRaw = concat(CSS_FILES, FD);
+const jsRaw = concat(JS_FILES, FD);
 
-const bundleCssPath = path.join(FD, 'fd.bundle.css');
-const bundleJsPath = path.join(FD, 'fd.bundle.js');
-const bundleJs = minifyJs(jsRaw);
+// --- JS: minify + source map (transform, non bundle: niente rename dei top-level) ---
+const jsResult = esbuild.transformSync(jsRaw, {
+  loader: 'js',
+  minify: true,
+  keepNames: true, // codice legacy può leggere fn.name — non rischiamo per pochi KB
+  charset: 'utf8',
+  sourcemap: true,
+  sourcefile: 'fd.bundle.src.js',
+  logLevel: 'warning',
+});
+const bundleJs = jsResult.code + '\n//# sourceMappingURL=fd.bundle.js.map\n';
 
-fs.writeFileSync(bundleCssPath, minifyCss(cssRaw));
-fs.writeFileSync(bundleJsPath, bundleJs);
+// --- CSS: minify (sostituisce il vecchio minificatore regex + protezione calc) ---
+const cssResult = esbuild.transformSync(cssRaw, {
+  loader: 'css',
+  minify: true,
+  charset: 'utf8',
+  logLevel: 'warning',
+});
+
+fs.writeFileSync(path.join(FD, 'fd.bundle.js'), bundleJs);
+fs.writeFileSync(path.join(FD, 'fd.bundle.js.map'), jsResult.map);
+fs.writeFileSync(path.join(FD, 'fd.bundle.src.js'), jsRaw);
+fs.writeFileSync(path.join(FD, 'fd.bundle.css'), cssResult.code);
 
 // Fail the build if minified JS does not parse (e.g. stray commas in source).
 try {
@@ -105,10 +87,12 @@ try {
 
 const manifest = {
   builtAt: new Date().toISOString(),
+  minifier: 'esbuild ' + esbuild.version,
   cssFiles: CSS_FILES.length,
   jsFiles: JS_FILES.length,
   cssBytes: fs.statSync(path.join(FD, 'fd.bundle.css')).size,
   jsBytes: fs.statSync(path.join(FD, 'fd.bundle.js')).size,
+  jsMapBytes: fs.statSync(path.join(FD, 'fd.bundle.js.map')).size,
   requestsBefore: CSS_FILES.length + JS_FILES.length,
   requestsAfter: 2,
 };

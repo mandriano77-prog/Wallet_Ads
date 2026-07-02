@@ -118,7 +118,11 @@ test('build-fd-bundles lists FASE 5–6 modules', () => {
   assert.match(build, /fd-page-states\.js/);
   assert.match(build, /fd-mobile-gate\.css/);
   assert.match(build, /fd-mobile-gate\.js/);
-  assert.match(build, /function protectCalc/);
+  // Minificazione delegata a esbuild (transform, no bundling: i top-level
+  // identifier condivisi tra i file NON devono essere rinominati).
+  assert.match(build, /require\('esbuild'\)/);
+  assert.match(build, /minify: true/);
+  assert.match(build, /sourcemap: true/);
 });
 
 test('fd.bundle.js is valid JavaScript after build', () => {
@@ -128,8 +132,13 @@ test('fd.bundle.js is valid JavaScript after build', () => {
   });
   const bundle = read('src/filodiretto/fd.bundle.js');
   assert.ok(
-    bundle.includes('/^https?:\\/\\//i.test(value)'),
+    // L'argomento locale viene rinominato dal minificatore, la regex no.
+    bundle.includes('/^https?:\\/\\//i.test('),
     'bundle must preserve URL regex literal (minifier must not strip // inside regex)'
+  );
+  assert.ok(
+    bundle.includes('//# sourceMappingURL=fd.bundle.js.map'),
+    'bundle must reference its source map'
   );
 });
 
@@ -139,8 +148,9 @@ test('fd.bundle.css preserves calc() operator spacing (W.AI inset)', () => {
     bundle,
     /#waiOverlay\.wai-panel\{[^}]*calc\(var\(--fd-wai-fab-inset\) \+ var\(--fd-wai-fab-size\) \+ var\(--fd-wai-fab-gap\)\)/
   );
-  assert.match(bundle, /--fd-wai-fab-size:64px/);
-  assert.match(bundle, /--fd-wai-fab-inset:44px/);
+  // esbuild conserva lo spazio dopo i due punti nelle custom property (valore token stream).
+  assert.match(bundle, /--fd-wai-fab-size:\s*64px/);
+  assert.match(bundle, /--fd-wai-fab-inset:\s*44px/);
   const broken = [...bundle.matchAll(/calc\([^)]*\+[^)]*\)/g)].filter((m) => !/ \+ /.test(m[0]));
   assert.equal(broken.length, 0, 'minifier must not strip spaces around + inside calc()');
 });
