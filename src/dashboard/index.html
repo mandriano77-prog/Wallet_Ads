@@ -1962,6 +1962,11 @@
                         <div style="margin:10px 0 14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-subtle);font-size:12px;line-height:1.45;color:var(--text2);">
                             Dopo aver aggiunto o modificato un POI premi <strong>Salva e aggiorna pass</strong>. Apple aggiorna il pass via APNs e usa il testo quando propone il pass vicino al POI; Google aggiorna le merchant location e invia anche il messaggio Wallet ai pass salvati.
                         </div>
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label class="form-label" for="geoMaxDistance">Raggio di rilevamento (metri)</label>
+                            <input type="number" id="geoMaxDistance" value="500" min="100" max="5000" step="100" style="width:120px;" onchange="renderGeoLocations()" oninput="renderGeoLocations()">
+                            <p class="form-hint" style="margin:4px 0 0;font-size:11px;color:var(--text2);">Un solo raggio per tutto il pass Apple Wallet (100–5000 m). Google decide autonomamente distanza e tempi (Nearby Notifications).</p>
+                        </div>
                         <div id="geoLocationsList"></div>
                         <div id="geoEmptyMsg" style="padding:20px;text-align:center;color:var(--text2);font-size:13px;border:1px dashed var(--border);border-radius:8px;">
                             Nessun punto di prossimità configurato. Clicca "+ Aggiungi POI" per iniziare.
@@ -1977,10 +1982,6 @@
                                 <option value="samsung">Samsung Wallet</option>
                                 <option value="all" selected>Tutti i canali</option>
                             </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Distanza massima di rilevamento (metri)</label>
-                            <input type="number" id="geoMaxDistance" value="500" min="100" max="5000" step="100" style="width:120px;">
                         </div>
                         <button class="btn" style="width:100%;font-weight:700;margin-top:12px;" onclick="saveGeofencing()" id="geoSaveBtn">&#128205; Salva e Aggiorna Pass</button>
                         <p id="geoSaveStatus" style="font-size:12px;color:var(--text2);margin-top:8px;text-align:left;line-height:1.45;"></p>
@@ -7787,6 +7788,7 @@ function switchPushTab(tab) {
         btn.classList.toggle('active', active);
         btn.setAttribute('aria-selected', active ? 'true' : 'false');
     });
+    if (tab === 'scheduled') syncScheduledScreenAlertFromImmediate();
 }
 
 // --- Campaign selects ---
@@ -8052,14 +8054,41 @@ function getImmediatePushScreenAlert() {
     return (document.getElementById('pushScreenAlert')?.value || '').trim();
 }
 
-function applyPushTextValidation(title, message, backDetails, screenAlert) {
+function getScheduledPushScreenAlert() {
+    const sched = (document.getElementById('schedScreenAlert')?.value || '').trim();
+    if (sched) return sched;
+    return getImmediatePushScreenAlert();
+}
+
+function getScheduledPushTitle() {
+    const explicit = (document.getElementById('schedTitle')?.value || '').trim();
+    const screen = getScheduledPushScreenAlert();
+    return (explicit || screen || 'Aggiornamento').slice(0, PUSH_TITLE_MAX);
+}
+
+function getScheduledPushMessage() {
+    const explicit = (document.getElementById('schedMessage')?.value || '').trim();
+    const screen = getScheduledPushScreenAlert();
+    return (explicit || screen || 'Apri il pass per i dettagli').slice(0, PUSH_MESSAGE_MAX);
+}
+
+function syncScheduledScreenAlertFromImmediate() {
+    const schedEl = document.getElementById('schedScreenAlert');
+    const pushEl = document.getElementById('pushScreenAlert');
+    if (!schedEl || !pushEl) return;
+    if (!(schedEl.value || '').trim() && (pushEl.value || '').trim()) {
+        schedEl.value = pushEl.value;
+    }
+}
+
+function applyPushTextValidation(title, message, backDetails, screenAlert, screenFieldId = 'pushScreenAlert') {
     let invalid = false;
     const screen = String(screenAlert ?? getImmediatePushScreenAlert()).trim();
     if (!screen) {
-        setPushFieldError('pushScreenAlert', 'Inserisci il testo della notifica Wallet (lock screen)');
+        setPushFieldError(screenFieldId, 'Inserisci il testo della notifica Wallet (lock screen)');
         invalid = true;
     } else if (screen.length > 178) {
-        setPushFieldError('pushScreenAlert', 'Notifica lock screen max 178 caratteri');
+        setPushFieldError(screenFieldId, 'Notifica lock screen max 178 caratteri');
         invalid = true;
     }
     const details = String(backDetails ?? '').trim();
@@ -8356,7 +8385,7 @@ async function createScheduledPush() {
     const time = document.getElementById('schedTime').value || '09:00';
 
     if (!brandId) return alert('Seleziona un brand');
-    const schedScreenAlert = (document.getElementById('schedScreenAlert')?.value || '').trim();
+    const schedScreenAlert = getScheduledPushScreenAlert();
     if (!schedScreenAlert) {
         setPushFieldError('schedScreenAlert', 'Inserisci il testo della notifica Wallet (lock screen)');
         return;
@@ -8366,11 +8395,9 @@ async function createScheduledPush() {
         return;
     }
     setPushFieldError('schedScreenAlert', '');
-    // I campi strip del pannello programmata sono legacy/nascosti: come nella push
-    // immediata, titolo e messaggio ricadono sul testo notifica Wallet.
-    const title = ((document.getElementById('schedTitle')?.value || '').trim() || schedScreenAlert || 'Aggiornamento').slice(0, PUSH_TITLE_MAX);
-    const message = ((document.getElementById('schedMessage')?.value || '').trim() || schedScreenAlert || 'Apri il pass per i dettagli').slice(0, PUSH_MESSAGE_MAX);
-    if (!applyPushTextValidation(title, message, (document.getElementById('schedBackDetails')?.value || '').trim(), schedScreenAlert)) return;
+    const title = getScheduledPushTitle();
+    const message = getScheduledPushMessage();
+    if (!applyPushTextValidation(title, message, (document.getElementById('schedBackDetails')?.value || '').trim(), schedScreenAlert, 'schedScreenAlert')) return;
 
     const body = { brand_id: brandId, title, message, screen_alert: schedScreenAlert, update_pass: updatePass, channel, schedule_type: schedType, schedule_time: time };
     if (audienceId) body.audience_id = audienceId;
@@ -8475,9 +8502,15 @@ function geoHasValidCoords(loc) {
     return Number.isFinite(la) && Number.isFinite(lo);
 }
 
+function getGeoMaxDistanceValue() {
+    const n = parseInt(document.getElementById('geoMaxDistance')?.value, 10);
+    if (Number.isFinite(n) && n >= 100) return Math.min(n, 5000);
+    return 500;
+}
+
 function addGeoLocation() {
     if (geoLocations.length >= GEO_MAX_POI) return alert(`Massimo ${GEO_MAX_POI} POI per pass (limite Apple Wallet)`);
-    geoLocations.push({ name: '', latitude: '', longitude: '', radius: 500, relevantText: '', address: '' });
+    geoLocations.push({ name: '', latitude: '', longitude: '', radius: getGeoMaxDistanceValue(), relevantText: '', address: '' });
     geoOpenIndex = geoLocations.length - 1;
     renderGeoLocations();
 }
@@ -8513,7 +8546,7 @@ function updateGeoPoiCounter() {
 function geoMapEmbedUrl(loc) {
     const la = parseFloat(loc.latitude);
     const lo = parseFloat(loc.longitude);
-    const radius = Math.max(50, parseInt(loc.radius, 10) || 500);
+    const radius = getGeoMaxDistanceValue();
     if (!Number.isFinite(la) || !Number.isFinite(lo)) return '';
     const delta = Math.max(0.002, (radius / 111320) * 3);
     const bbox = `${lo - delta},${la - delta},${lo + delta},${la + delta}`;
@@ -8666,10 +8699,11 @@ function renderGeoLocations() {
     }
     empty.style.display = 'none';
     const latVal = (v) => (v === '' || v === undefined || v === null ? '' : v);
+    const globalRadius = getGeoMaxDistanceValue();
     container.innerHTML = geoLocations.map((loc, i) => {
         const hasCoords = geoHasValidCoords(loc);
         const hasLabel = loc.address && String(loc.address).trim();
-        const radius = Math.max(50, parseInt(loc.radius, 10) || 500);
+        const radius = globalRadius;
         const title = String(loc.name || '').trim() || `POI #${i + 1}`;
         const summaryText = hasLabel ? String(loc.address).trim() : 'Indirizzo da selezionare';
         const statusChip = hasCoords
@@ -8708,14 +8742,7 @@ function renderGeoLocations() {
                 <p style="font-size:11px;color:var(--text2);margin:6px 0 0;">Dati pubblici OpenStreetMap. Clicca un risultato per fissare il punto.</p>
             </div>
         `;
-        const radiusField = `
-            <div class="form-group" style="width:120px;margin-bottom:12px;">
-                <label class="form-label">Raggio (m)</label>
-                <input type="number" value="${radius}" min="50" max="5000" onchange="updateGeoField(${i},'radius',this.value);renderGeoLocations();">
-            </div>
-        `;
         const coordsDetails = hasCoords ? `
-            ${radiusField}
             ${mapBlock}
             <details style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:rgba(255,255,255,.02);">
                 <summary style="cursor:pointer;font-size:12px;color:var(--text2);">Coordinate (back-office) — lat/lon usati dal pass</summary>
@@ -8731,9 +8758,7 @@ function renderGeoLocations() {
                 </div>
                 <p style="font-size:10px;color:var(--text2);margin:0;">Di solito non serve modificare: arrivano dalla ricerca indirizzo.</p>
             </details>
-        ` : `
-            <div style="margin-bottom:12px;">${radiusField}</div>
-        `;
+        ` : '';
         return `
         <details class="geo-poi-item" ${isOpen ? 'open' : ''} ontoggle="onGeoPoiToggle(${i}, this.open)">
             <summary class="geo-poi-summary">
@@ -8797,7 +8822,14 @@ async function loadGeofencing() {
             ...loc,
             address: loc.address || ''
         }));
-        document.getElementById('geoMaxDistance').value = data.maxDistance || 500;
+        const loadedMax = parseInt(data.maxDistance, 10);
+        const fallbackRadius = geoLocations.reduce((max, loc) => {
+            const r = parseInt(loc.radius, 10);
+            return Number.isFinite(r) && r > max ? r : max;
+        }, 0);
+        document.getElementById('geoMaxDistance').value = (Number.isFinite(loadedMax) && loadedMax >= 100)
+            ? Math.min(loadedMax, 5000)
+            : (fallbackRadius >= 100 ? Math.min(fallbackRadius, 5000) : 500);
         const geoChannelEl = document.getElementById('geoChannel');
         if (geoChannelEl) geoChannelEl.value = 'all';
         renderGeoLocations();
@@ -8818,8 +8850,9 @@ async function saveGeofencing() {
         }
         if (!loc.relevantText || !String(loc.relevantText).trim()) return alert(`POI #${i+1}: inserisci il messaggio vicino al POI`);
     }
-    const maxDistance = parseInt(document.getElementById('geoMaxDistance').value) || 500;
+    const maxDistance = getGeoMaxDistanceValue();
     const channel = 'all';
+    const locationsPayload = geoLocations.map((loc) => ({ ...loc, radius: maxDistance }));
     const statusEl = document.getElementById('geoSaveStatus');
     const btn = document.getElementById('geoSaveBtn');
     const topBtn = document.getElementById('geoSaveBtnTop');
@@ -8831,7 +8864,7 @@ async function saveGeofencing() {
         const res = await fetch(`${API}/brands/${brandId}/geofencing`, {
             method: 'PUT',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ locations: geoLocations, maxDistance, channel })
+            body: JSON.stringify({ locations: locationsPayload, maxDistance, channel })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);

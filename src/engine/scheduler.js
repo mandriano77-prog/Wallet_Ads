@@ -12,6 +12,7 @@ const {
 } = require('../db');
 const { closeApnsSession } = require('./apns');
 const { executeWalletPush } = require('./push-dispatch');
+const { normalizeHrPushPayload, resolvePushScreenAlert } = require('./push-text-limits');
 
 /**
  * First `next_run_at` when saving a scheduled push from the dashboard.
@@ -113,10 +114,9 @@ async function executeScheduledPush(schedule, baseUrl) {
     return;
   }
 
-  // Legacy rows have no screen_alert — derive from title/message so HR dispatch does not reject.
-  const screenAlert = String(schedule.screen_alert || '').trim()
-    || [String(schedule.title || '').trim(), String(schedule.message || '').trim()].filter(Boolean).join(': ');
-  const result = await executeWalletPush({ ...schedule, screen_alert: screenAlert.slice(0, 178) }, {
+  const normalized = normalizeHrPushPayload(schedule);
+  const screen_alert = resolvePushScreenAlert(normalized);
+  const result = await executeWalletPush({ ...normalized, screen_alert }, {
     hrDeploy: true,
     resolvedStripBase64: schedule.strip_base64 || null,
   });

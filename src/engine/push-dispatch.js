@@ -24,7 +24,7 @@ const { sendPushBatch, closeApnsSession, shouldPruneApnsRegistration } = require
 const { syncGoogleWalletObjectsForPasses } = require('./google-wallet-sync');
 const googleWallet = require('./google-wallet');
 const samsungWallet = require('./samsung-wallet');
-const { attachBackDetailsToAnnouncement } = require('./push-text-limits');
+const { attachBackDetailsToAnnouncement, resolvePushScreenAlert } = require('./push-text-limits');
 const { activePushChannelKeys } = require('./wallet-channels');
 
 const activeJobIds = new Set();
@@ -162,7 +162,7 @@ async function executeWalletPush(body, ctx = {}) {
   if (!brand_id) {
     throw new Error('brand_id richiesto');
   }
-  const screenTextInput = String(screen_alert || '').trim();
+  const screenTextInput = resolvePushScreenAlert({ screen_alert, title, message });
   const effectiveTitle = String(title || screenTextInput || 'Aggiornamento').trim().slice(0, 22);
   const effectiveMessage = String(message || screenTextInput || 'Apri il pass per i dettagli').trim().slice(0, 66);
 

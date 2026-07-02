@@ -367,7 +367,7 @@ test('strip preview API route registered', () => {
 test('scheduled push: back_details stored and applied on execute', () => {
   assert.match(read('src/db/index.js'), /scheduled_push ADD COLUMN IF NOT EXISTS back_details/);
   assert.match(read('src/db/index.js'), /back_details/);
-  assert.match(read('src/engine/scheduler.js'), /executeWalletPush\(\{ \.\.\.schedule/);
+  assert.match(read('src/engine/scheduler.js'), /normalizeHrPushPayload\(schedule\)/);
   assert.match(read('src/engine/push-dispatch.js'), /attachBackDetailsToAnnouncement/);
   assert.match(read('src/api/routes.js'), /validatePushBackDetails\(req\.body\.back_details\)/);
   assert.match(read('src/dashboard/index.html'), /schedBackDetails/);
@@ -379,13 +379,25 @@ test('scheduled push: screen_alert stored, validated, and derived on execute', (
   assert.match(db, /screen_alert(?:.|\n){0,600}INSERT INTO scheduled_push/);
   assert.match(db, /'screen_alert'\]/);
   const scheduler = read('src/engine/scheduler.js');
-  assert.match(scheduler, /schedule\.screen_alert/);
-  assert.match(scheduler, /screen_alert: screenAlert\.slice\(0, 178\)/);
+  assert.match(scheduler, /normalizeHrPushPayload\(schedule\)/);
+  assert.match(scheduler, /resolvePushScreenAlert\(normalized\)/);
   const routes = read('src/api/routes.js');
   assert.match(routes, /validatePushScreenAlert\(req\.body\.screen_alert\)/);
+  assert.match(routes, /normalizeHrPushPayload\(req\.body\)/);
   const dashboard = read('src/dashboard/index.html');
   assert.match(dashboard, /schedScreenAlert/);
+  assert.match(dashboard, /getScheduledPushScreenAlert/);
   assert.match(dashboard, /screen_alert: schedScreenAlert/);
+  const { normalizeHrPushPayload, resolvePushScreenAlert } = require('../src/engine/push-text-limits');
+  const normalized = normalizeHrPushPayload({
+    screen_alert: 'PROMO WEEKEND: sconti fino al 50%',
+  });
+  assert.equal(normalized.screen_alert, 'PROMO WEEKEND: sconti fino al 50%');
+  assert.equal(normalized.title, 'PROMO WEEKEND: sconti '.slice(0, 22));
+  assert.equal(
+    resolvePushScreenAlert({ title: 'PROMO', message: 'Dettagli sul pass' }),
+    'PROMO: Dettagli sul pass'
+  );
 });
 
 test('pass preview API route registered', () => {

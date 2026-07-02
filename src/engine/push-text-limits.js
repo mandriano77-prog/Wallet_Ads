@@ -61,6 +61,29 @@ function normalizePushBackDetails(raw) {
   return d.slice(0, PUSH_BACK_DETAILS_MAX);
 }
 
+/** Lock-screen copy — persisted screen_alert wins, else title:message (legacy rows). */
+function resolvePushScreenAlert({ screen_alert, title, message } = {}) {
+  const screen = String(screen_alert || '').trim();
+  if (screen) return screen.slice(0, PUSH_SCREEN_ALERT_MAX);
+  const joined = [String(title || '').trim(), String(message || '').trim()].filter(Boolean).join(': ');
+  return joined.slice(0, PUSH_SCREEN_ALERT_MAX);
+}
+
+/** Same shape as POST /push/send — strip fields derived from screen_alert when omitted. */
+function normalizeHrPushPayload(body = {}) {
+  const screenText = resolvePushScreenAlert(body);
+  const out = {
+    ...body,
+    title: String(body.title || screenText || 'Aggiornamento').trim().slice(0, PUSH_TITLE_MAX),
+    message: String(body.message || screenText || 'Apri il pass per i dettagli').trim().slice(0, PUSH_MESSAGE_MAX),
+    screen_alert: screenText || null,
+  };
+  if (body.back_details !== undefined) {
+    out.back_details = normalizePushBackDetails(body.back_details);
+  }
+  return out;
+}
+
 function validatePushBackDetails(backDetails) {
   const d = String(backDetails ?? '').trim();
   if (!d) return [];
@@ -148,6 +171,8 @@ module.exports = {
   validatePushScreenAlert,
   validatePushBackDetails,
   normalizePushBackDetails,
+  resolvePushScreenAlert,
+  normalizeHrPushPayload,
   attachBackDetailsToAnnouncement,
   resolveGoogleNotifyPayload,
   firstPushTextError,

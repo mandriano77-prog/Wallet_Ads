@@ -186,18 +186,20 @@ test('LOCK: API push valida screen_alert su send e scheduled', () => {
   assert.match(routes, /validatePushScreenAlert\(screen_alert\)/);
   assert.match(routes, /validatePushScreenAlert\(req\.body\.screen_alert\)/);
   assert.match(read('src/engine/push-dispatch.js'), /screen_alert richiesto per la notifica Wallet/);
+  assert.match(read('src/engine/push-dispatch.js'), /resolvePushScreenAlert\(\{ screen_alert, title, message \}\)/);
 });
 
 // ── 4. Push programmata: persistenza + fallback legacy ──
 
-test('LOCK: scheduled_push persiste screen_alert e lo scheduler ha il fallback', () => {
+test('LOCK: scheduled_push persiste screen_alert e lo scheduler normalizza come send', () => {
   const db = read('src/db/index.js');
   assert.match(db, /scheduled_push ADD COLUMN IF NOT EXISTS screen_alert/);
   assert.match(db, /INSERT INTO scheduled_push[\s\S]{0,400}screen_alert/);
   assert.match(db, /'screen_alert'\]/);
   const scheduler = read('src/engine/scheduler.js');
-  assert.match(scheduler, /executeWalletPush\(\{ \.\.\.schedule, screen_alert/);
-  assert.match(scheduler, /schedule\.screen_alert/);
+  assert.match(scheduler, /normalizeHrPushPayload\(schedule\)/);
+  assert.match(scheduler, /resolvePushScreenAlert\(normalized\)/);
+  assert.match(read('src/api/routes.js'), /normalizeHrPushPayload\(req\.body\)/);
 });
 
 // ── 4b. Storico push: screen_alert salvato e reinvio con fallback ──

@@ -85,6 +85,7 @@ const {
   validatePushBackDetails,
   PUSH_SCREEN_ALERT_MAX,
   normalizePushBackDetails,
+  normalizeHrPushPayload,
   PUSH_TITLE_MAX,
   PUSH_MESSAGE_MAX,
   PUSH_BACK_DETAILS_MAX,
@@ -2822,13 +2823,10 @@ router.post('/push/send', async (req, res) => {
       hrDeploy: isHrBrand(brand, req),
       resolvedStripBase64,
     };
-    const screenText = String(screen_alert || '').trim();
-    const payload = {
+    const payload = normalizeHrPushPayload({
       ...req.body,
-      title: String(title || screenText || 'Aggiornamento').trim().slice(0, PUSH_TITLE_MAX),
-      message: String(message || screenText || 'Apri il pass per i dettagli').trim().slice(0, PUSH_MESSAGE_MAX),
       field_values,
-    };
+    });
 
     if (test_pass_id) {
       const result = await executeWalletPush(payload, pushCtx);
@@ -2915,14 +2913,6 @@ router.post('/push/scheduled', async (req, res) => {
     if (req.body.channel && !assertPushChannel(req.body.channel)) {
       return res.status(400).json({ error: 'channel non valido (apple|google|samsung|all o combinazioni apple,google)' });
     }
-    const textErrors = validatePushText(req.body.title, req.body.message);
-    if (textErrors.length) {
-      return res.status(400).json({
-        error: textErrors[0].message,
-        field: textErrors[0].field,
-        limits: { title_max: PUSH_TITLE_MAX, message_max: PUSH_MESSAGE_MAX },
-      });
-    }
     if (req.body.update_pass !== false) {
       const screenErrors = validatePushScreenAlert(req.body.screen_alert);
       if (screenErrors.length) {
@@ -2940,9 +2930,7 @@ router.post('/push/scheduled', async (req, res) => {
         limits: { back_details_max: PUSH_BACK_DETAILS_MAX },
       });
     }
-    const body = { ...req.body };
-    body.back_details = normalizePushBackDetails(body.back_details);
-    body.screen_alert = String(body.screen_alert || '').trim().slice(0, PUSH_SCREEN_ALERT_MAX) || null;
+    const body = normalizeHrPushPayload(req.body);
     if (body.pass_link_url) {
       parsePassLinkFromPushBody(body, body.title);
       body.include_pass_link = true;
@@ -5740,7 +5728,7 @@ async function performImmediatePushForWai(payload, opts = {}) {
 
 const WAI_EXECUTORS = {
   'push.schedule': async (payload, opts = {}) => {
-    const body = { ...payload };
+    const body = normalizeHrPushPayload({ ...payload });
     if (body.strip_base64) {
       body.strip_base64 = String(body.strip_base64);
     } else if (body.strip_prompt_en) {
