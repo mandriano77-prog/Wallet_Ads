@@ -229,6 +229,36 @@ function buildPushHeaderAlertField(headerHint) {
 }
 
 /**
+ * When a decorative header hint exists, merge the invisible push token into its
+ * value so iOS shows one header slot (caption visible, no orphan dot). Without
+ * a hint, fall back to a standalone announcement header field.
+ */
+function mergePushAlertIntoHeaderHint(headerHint, pushAnn) {
+  const alertText = buildPushChangeMessage(pushAnn);
+  if (!alertText) {
+    return { headerHint: headerHint || null, pushAlert: null };
+  }
+  const pushTs = Number(pushAnn?.ts || Date.now());
+  const token = invisibleChangeToken(pushTs).slice(0, 12);
+
+  if (headerHint) {
+    return {
+      headerHint: {
+        ...headerHint,
+        value: String(headerHint.value || '') + token,
+        changeMessage: `${alertText}%@`,
+      },
+      pushAlert: null,
+    };
+  }
+
+  return {
+    headerHint: null,
+    pushAlert: buildPushAnnouncementField(pushAnn),
+  };
+}
+
+/**
  * Deprecated name kept for old tests/importers. The Wallet alert rides on a
  * changed front announcement field.
  */
@@ -536,7 +566,10 @@ function buildEmployeePass({ brand, template, instance, member, brandConfig, api
 
   // Front layout: strip promo + secondary NOME/AREA/COIN + Apple alert auxiliary field.
   const pushAnn = resolvePushAnnouncement(cfg, instance);
-  const headerHint = buildPushHeaderAlertField(resolvePassHeaderHint(template, cfg));
+  const { headerHint, pushAlert } = mergePushAlertIntoHeaderHint(
+    buildPushHeaderAlertField(resolvePassHeaderHint(template, cfg)),
+    pushAnn
+  );
   const secondary = [];
   if (profile.full_name) {
     secondary.push({ key: 'name', label: 'NOME', value: profile.full_name });
@@ -547,8 +580,6 @@ function buildEmployeePass({ brand, template, instance, member, brandConfig, api
   secondary.push(buildCoinFieldValue(coinBalance));
 
   const auxiliary = [];
-  // Apple lock-screen alert — separate property, rendered into headerFields (Apple only).
-  const pushAlert = buildPushAnnouncementField(pushAnn);
 
   const backSections = buildBackSections({
     brand,

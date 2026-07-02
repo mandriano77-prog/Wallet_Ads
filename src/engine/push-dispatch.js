@@ -8,6 +8,7 @@ const {
   getInstantWinCampaign,
   getGamificationCampaign,
   updatePassDynamicLinks,
+  clearPassDynamicLinks,
   updatePassPushOverlays,
   touchPassesByIds,
   markPassesPushDelivered,
@@ -268,7 +269,7 @@ async function executeWalletPush(body, ctx = {}) {
       { include_pass_link, pass_link_url, pass_link_label, pass_link_expires_at, back_link_url, back_link_label },
       effectiveTitle
     );
-    if (!passLink) {
+    if (!passLink && include_pass_link !== false) {
       const linkOutUrl = (back_link_url || pass_link_url || '').trim();
       if (linkOutUrl) {
         passLink = parsePassLinkFromPushBody(
@@ -283,8 +284,12 @@ async function executeWalletPush(body, ctx = {}) {
       }
     }
 
+    const passIds = targetPasses.map((p) => p.id);
     if (passLink) {
-      await updatePassDynamicLinks(targetPasses.map((p) => p.id), passLink);
+      await updatePassDynamicLinks(passIds, passLink);
+      delete config.pushLinkOut;
+    } else if (passIds.length) {
+      await clearPassDynamicLinks(passIds);
       delete config.pushLinkOut;
     } else {
       delete config.pushLinkOut;

@@ -1977,6 +1977,23 @@ async function updatePassDynamicLinks(passIds, { label, url, expiresAt }) {
   return { updated: result.rowCount || 0 };
 }
 
+/** Remove push CTA link from targeted passes (revert to base back layout). */
+async function clearPassDynamicLinks(passIds) {
+  const ids = (passIds || []).filter(Boolean);
+  if (!ids.length) return { cleared: 0 };
+  const result = await pool.query(
+    `UPDATE pass_instances
+     SET dynamic_link_label = NULL,
+         dynamic_link_url = NULL,
+         dynamic_link_set_at = NULL,
+         dynamic_link_expires_at = NULL,
+         last_updated = NOW()
+     WHERE id = ANY($1::text[])`,
+    [ids]
+  );
+  return { cleared: result.rowCount || 0 };
+}
+
 /** Apply push strip/message overlay to targeted passes only (not brand-wide). */
 async function updatePassPushOverlays(passIds, { announcement, stripBase64 } = {}) {
   const ids = (passIds || []).filter(Boolean);
@@ -4434,6 +4451,7 @@ module.exports = {
   deleteMemberRecord,
   importEmployeesBatch,
   updatePassDynamicLinks,
+  clearPassDynamicLinks,
   updatePassPushOverlays,
   clearPassPushOverlay,
   touchPassesForTemplate,

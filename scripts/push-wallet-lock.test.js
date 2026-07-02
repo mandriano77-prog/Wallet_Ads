@@ -35,13 +35,14 @@ function visiblePassValue(value) {
 
 // ── 1. Meccanismo notifica lock screen (front announcement + changeMessage %@) ──
 
-test('LOCK: alert Wallet su campo header announcement con changeMessage template %@', () => {
+test('LOCK: alert Wallet su campo header con changeMessage template %@', () => {
   const src = read('src/engine/employee-pass.js');
   assert.match(src, /function buildPushAnnouncementField/);
+  assert.match(src, /function mergePushAlertIntoHeaderHint/);
   assert.match(src, /key: 'announcement'/);
   assert.match(src, /changeMessage: `\$\{alertText\}%@`/);
-  // Il carrier vive nei headerFields (nessuna colonna vuota nella riga NOME/AREA/COIN).
-  assert.match(src, /headerFields\.push\(employeePass\.pushAlert\)/);
+  // Carrier: merged into info_hint when present, else standalone announcement header field.
+  assert.match(src, /mergePushAlertIntoHeaderHint/);
   // Vietato tornare agli approcci falliti: aux screen_alert / back wallet_push_alert.
   assert.doesNotMatch(src, /key: 'screen_alert'/);
   assert.doesNotMatch(src, /key: 'wallet_push_alert'/);
@@ -103,9 +104,13 @@ test('LOCK: didascalia header decorativa convive col carrier notifica', () => {
   });
   assert.ok(ep.headerHint, 'la didascalia decorativa non deve più essere soppressa');
   assert.equal(ep.headerHint.label, 'CLICCA SUI');
+  assert.equal(ep.headerHint.changeMessage, 'PROMO: Solo oggi%@');
+  assert.equal(visiblePassValue(ep.headerHint.value), 'Per ulteriori info');
+  assert.ok(ep.headerHint.value.length > 'Per ulteriori info'.length);
+  assert.equal(ep.pushAlert, null, 'con didascalia il carrier va fuso in info_hint, non in un secondo campo');
   const apple = toApplePass(ep);
   const keys = (apple.passStructure.headerFields || []).map((f) => f.key);
-  assert.deepEqual(keys, ['info_hint', 'announcement']);
+  assert.deepEqual(keys, ['info_hint'], 'un solo header field: didascalia visibile, niente cerchietto');
 });
 
 test('LOCK: i campi retro non hanno mai changeMessage vuoto (causa notifica generica)', () => {

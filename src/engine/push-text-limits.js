@@ -76,7 +76,10 @@ function validatePushBackDetails(backDetails) {
 function attachBackDetailsToAnnouncement(announcement, backDetailsRaw) {
   if (!announcement) return announcement;
   const back_details = normalizePushBackDetails(backDetailsRaw);
-  if (!back_details) return announcement;
+  if (!back_details) {
+    const { back_details: _bd, backDetails: _bD, ...rest } = announcement;
+    return rest;
+  }
   return { ...announcement, back_details };
 }
 

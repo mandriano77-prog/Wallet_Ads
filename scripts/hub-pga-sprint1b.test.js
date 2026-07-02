@@ -287,7 +287,7 @@ test('HR back: push back_details after dynamic link', () => {
   assert.match(detailsField.value, /Non cumulabile/);
 });
 
-test('HR push: lock-screen alert on invisible header announcement field, caption preserved', () => {
+test('HR push: lock-screen alert merged into header hint, caption preserved', () => {
   const { buildEmployeePass, toApplePass } = require('../src/engine/employee-pass');
   const ep = buildEmployeePass({
     brand: { id: 'b1', name: 'NTI', slug: 'nti', config: {} },
@@ -310,23 +310,21 @@ test('HR push: lock-screen alert on invisible header announcement field, caption
     brandConfig: {},
   });
   assert.equal(ep.front.auxiliary.length, 0);
-  // La didascalia decorativa non viene più soppressa.
   assert.ok(ep.headerHint);
   assert.equal(ep.headerHint.label, 'CLICCA SUI');
-  assert.ok(ep.pushAlert);
-  assert.equal(ep.pushAlert.changeMessage, '2X1 OCCHIALI: Solo questa settimana%@');
-  assert.equal(visiblePassValue(ep.pushAlert.value), '');
-  assert.ok(ep.pushAlert.value.length > 0);
+  assert.equal(ep.headerHint.changeMessage, '2X1 OCCHIALI: Solo questa settimana%@');
+  assert.equal(visiblePassValue(ep.headerHint.value), 'Per altre informazioni');
+  assert.ok(ep.headerHint.value.length > 'Per altre informazioni'.length);
+  assert.equal(ep.pushAlert, null);
   assert.equal(ep.backSections.find((s) => s.key === 'wallet_push_alert'), undefined);
   const coin = ep.front.secondary.find((f) => f.key === 'coin_balance');
   assert.ok(coin);
   assert.equal(coin.changeMessage, 'Hai %@ coin');
   const apple = toApplePass(ep);
-  const appleAlert = (apple.passStructure.headerFields || []).find((f) => f.key === 'announcement');
-  assert.ok(appleAlert);
-  assert.equal(appleAlert.changeMessage, '2X1 OCCHIALI: Solo questa settimana%@');
-  assert.equal(visiblePassValue(appleAlert.value), '');
-  assert.ok((apple.passStructure.headerFields || []).some((f) => f.key === 'info_hint'));
+  const hint = (apple.passStructure.headerFields || []).find((f) => f.key === 'info_hint');
+  assert.ok(hint);
+  assert.equal(hint.changeMessage, '2X1 OCCHIALI: Solo questa settimana%@');
+  assert.equal((apple.passStructure.headerFields || []).length, 1);
   assert.equal((apple.passStructure.auxiliaryFields || []).length, 0);
   assert.equal((apple.passStructure.backFields || []).find((f) => f.key === 'wallet_push_alert'), undefined);
 });
