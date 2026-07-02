@@ -1,6 +1,7 @@
 const googleWallet = require('./google-wallet');
 const { getTemplate, markGoogleWalletUpdateStatus, updateGoogleWalletStatus, updatePassDeviceId } = require('../db');
 const { parsePushAnnouncementRecord } = require('./pass-push-state');
+const { resolveGoogleNotifyPayload } = require('./push-text-limits');
 
 const DEFAULT_CONCURRENCY = Math.max(
   1,
@@ -12,6 +13,7 @@ async function syncGoogleWalletObjectsForPasses({
   passes,
   message,
   title,
+  screen_alert,
   back_details,
   passLink = null,
   concurrency = DEFAULT_CONCURRENCY,
@@ -34,6 +36,10 @@ async function syncGoogleWalletObjectsForPasses({
   let processed = 0;
   let updatedCount = 0;
   let errorCount = 0;
+  let notifyDelivered = 0;
+  let notifySilent = 0;
+  let notifyQuotaHit = 0;
+  const notifyCopy = resolveGoogleNotifyPayload({ screen_alert, title, message });
   const workers = Math.max(1, Math.min(concurrency, eligible.length));
 
   async function emitProgress() {
@@ -70,12 +76,36 @@ async function syncGoogleWalletObjectsForPasses({
           await updatePassDeviceId(savedPass?.serial_number || pass.serial_number, passObject.id, 'google');
         }
         let notifyResult = null;
-        if (message) {
-          notifyResult = await googleWallet.updatePassMessage(pass.serial_number, message, brand, { title });
+        const savedOnDevice = pass.google_wallet_saved === true
+          || pass.google_wallet_saved === 'true'
+          || pass.google_wallet_saved === 1
+          || serverObject?.hasUsers === true
+          || serverObject?.hasUsers === 'true';
+        if (notifyCopy.message && savedOnDevice) {
+          notifyResult = await googleWallet.updatePassMessage(
+            pass.serial_number,
+            notifyCopy.message,
+            brand,
+            {
+              title: notifyCopy.title,
+              objectId: pass.google_wallet_object_id || passObject.id || null,
+            }
+          );
+        } else if (notifyCopy.message && !savedOnDevice) {
+          console.warn(
+            `[GoogleWallet] skip notify for ${pass.serial_number}: pass not saved on device (hasUsers=false)`
+          );
         }
-        const googleStatus = !message
+        const googleStatus = !notifyCopy.message
           ? 'updated'
-          : (notifyResult?.messageType === 'TEXT_AND_NOTIFY' ? 'delivered' : 'silent');
+          : !savedOnDevice
+            ? 'pending_save'
+            : (notifyResult?.messageType === 'TEXT_AND_NOTIFY'
+              ? 'delivered'
+              : (notifyResult?.quotaExceeded ? 'quota_exceeded' : 'silent'));
+        if (googleStatus === 'delivered') notifyDelivered += 1;
+        else if (googleStatus === 'quota_exceeded') notifyQuotaHit += 1;
+        else if (googleStatus === 'silent') notifySilent += 1;
         await markGoogleWalletUpdateStatus(pass.serial_number, googleStatus);
         outcomes[index] = { ok: true };
         processed++;
@@ -97,7 +127,15 @@ async function syncGoogleWalletObjectsForPasses({
   const attempted = eligible.length;
   const updated = outcomes.filter((o) => o?.ok).length;
   const errors = outcomes.filter((o) => o && !o.ok).length;
-  return { attempted, updated, errors, skipped: false };
+  return {
+    attempted,
+    updated,
+    errors,
+    skipped: false,
+    notify_delivered: notifyDelivered,
+    notify_silent: notifySilent,
+    notify_quota_hit: notifyQuotaHit,
+  };
 }
 
 function withCurrentPushDetails(pass, { title, message, back_details, passLink } = {}) {

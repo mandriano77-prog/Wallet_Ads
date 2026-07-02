@@ -142,6 +142,22 @@ test('buildPassClass maps geofencing locations to Google merchantLocations', () 
   }
 });
 
+test('resolveGoogleNotifyPayload prefers screen_alert and splits title:body', () => {
+  const { resolveGoogleNotifyPayload } = require('../src/engine/push-text-limits');
+  const split = resolveGoogleNotifyPayload({
+    screen_alert: 'Promo estate: sconto 20% in sede',
+    title: 'STRIP',
+    message: 'Strip msg',
+  });
+  assert.equal(split.title, 'Promo estate');
+  assert.equal(split.message, 'sconto 20% in sede');
+
+  const single = resolveGoogleNotifyPayload({
+    screen_alert: 'Comunicazione urgente per tutti',
+  });
+  assert.equal(single.message, 'Comunicazione urgente per tutti');
+});
+
 test('buildGoogleNotifyMessagePayload uses TEXT_AND_NOTIFY and HR limits', () => {
   const { mod, restore } = loadGoogleWallet({ GOOGLE_WALLET_ISSUER_ID: '1' });
   try {

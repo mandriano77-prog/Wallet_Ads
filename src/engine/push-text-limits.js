@@ -73,6 +73,36 @@ function validatePushBackDetails(backDetails) {
   return [];
 }
 
+/** Title + body for Google Wallet addMessage (TEXT_AND_NOTIFY). Prefers screen_alert. */
+function resolveGoogleNotifyPayload({ screen_alert, title, message } = {}) {
+  const screen = String(screen_alert || '').trim();
+  const stripTitle = String(title || '').trim();
+  const stripMessage = String(message || '').trim();
+
+  if (screen) {
+    const colonIdx = screen.indexOf(':');
+    if (colonIdx > 0) {
+      const head = screen.slice(0, colonIdx).trim();
+      const tail = screen.slice(colonIdx + 1).trim();
+      if (head && tail) {
+        return {
+          title: head.slice(0, PUSH_TITLE_MAX),
+          message: tail.slice(0, PUSH_MESSAGE_MAX),
+        };
+      }
+    }
+    return {
+      title: (stripTitle || screen).slice(0, PUSH_TITLE_MAX) || 'NOVITÀ',
+      message: screen.slice(0, PUSH_MESSAGE_MAX),
+    };
+  }
+
+  return {
+    title: (stripTitle || 'NOVITÀ').slice(0, PUSH_TITLE_MAX),
+    message: (stripMessage || 'Apri il pass per i dettagli').slice(0, PUSH_MESSAGE_MAX),
+  };
+}
+
 function attachBackDetailsToAnnouncement(announcement, backDetailsRaw) {
   if (!announcement) return announcement;
   const back_details = normalizePushBackDetails(backDetailsRaw);
@@ -119,6 +149,7 @@ module.exports = {
   validatePushBackDetails,
   normalizePushBackDetails,
   attachBackDetailsToAnnouncement,
+  resolveGoogleNotifyPayload,
   firstPushTextError,
   PUSH_TEXT_AGENT_RULES,
 };

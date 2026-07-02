@@ -363,6 +363,7 @@ async function executeWalletPush(body, ctx = {}) {
       passes: targetPasses,
       title: effectiveTitle,
       message: effectiveMessage,
+      screen_alert: screenTextInput,
       back_details,
       passLink,
       onProgress: ctx.onProgress

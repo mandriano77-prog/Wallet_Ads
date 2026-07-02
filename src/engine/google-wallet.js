@@ -892,9 +892,10 @@ function buildGoogleNotifyMessagePayload({ title, message, messageId }) {
 async function addPassNotifyMessage(serialNumber, { title, message }, brand, options = {}) {
   const passKind = resolvePassKind(brand);
   const objectPath = passKind === 'loyalty' ? 'loyaltyObject' : 'genericObject';
-  const objectId = buildObjectId(serialNumber, brand);
+  const objectId = String(options.objectId || '').trim() || buildObjectId(serialNumber, brand);
   const legacyObjectId = buildLegacyObjectId(serialNumber);
-  const messageId = options.messageId || `push_${serialNumber}_${Date.now()}`;
+  const messageId = options.messageId
+    || `push_${serialNumber}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   const payload = buildGoogleNotifyMessagePayload({ title, message, messageId });
 
   async function postAddMessage(targetId, body) {
@@ -907,14 +908,16 @@ async function addPassNotifyMessage(serialNumber, { title, message }, brand, opt
 
   async function tryNotify(targetId) {
     try {
-      return await postAddMessage(targetId, payload);
+      const out = await postAddMessage(targetId, payload);
+      return { ...out, quotaExceeded: false };
     } catch (err) {
       if (options.silentOnQuota !== false && isGoogleNotifyQuotaError(err)) {
-        console.warn(`[GoogleWallet] notify quota exceeded for ${targetId}, falling back to TEXT`);
+        console.warn(`[GoogleWallet] notify quota exceeded for ${targetId}, falling back to TEXT (max 3 notify/24h per pass)`);
         const silentPayload = {
           message: { ...payload.message, messageType: 'TEXT' },
         };
-        return postAddMessage(targetId, silentPayload);
+        const out = await postAddMessage(targetId, silentPayload);
+        return { ...out, quotaExceeded: true };
       }
       throw err;
     }

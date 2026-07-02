@@ -1473,7 +1473,8 @@ async function markPassPushStatus(serialNumber, status) {
 
 async function markGoogleWalletUpdateStatus(serialNumber, status) {
   if (!serialNumber) return { updated: 0 };
-  const okStatus = status === 'delivered' || status === 'silent' || status === 'updated';
+  const okStatus = status === 'delivered' || status === 'silent' || status === 'updated'
+    || status === 'pending_save' || status === 'quota_exceeded';
   const result = await pool.query(
     `UPDATE pass_instances
      SET google_last_update_at = NOW(),
