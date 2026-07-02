@@ -1184,6 +1184,19 @@ router.get('/passes/:passTypeId/:serialNumber', async (req, res) => {
   }
 });
 
+// Apple Wallet device log (spec: POST {webServiceURL}/v1/log).
+// I device inviano qui gli errori lato client (pass malformati, fetch falliti):
+// diagnostica utile nei log Railway, prima veniva persa con un 404.
+router.post('/log', (req, res) => {
+  try {
+    const logs = Array.isArray(req.body?.logs) ? req.body.logs : [];
+    for (const line of logs.slice(0, 20)) {
+      console.warn('[Apple Wallet][device-log]', String(line).slice(0, 500));
+    }
+  } catch (_) { /* mai fallire verso il device per un log */ }
+  res.status(200).send();
+});
+
 // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Creative asset image (public, used by <img> tags) ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
 router.get('/creative-assets/:id/image', async (req, res) => {
   try {
@@ -4146,34 +4159,49 @@ router.post('/play/:serial_number', async (req, res) => {
     if (campaign.end_date && new Date(campaign.end_date) < now)
       return res.status(400).json({ error: 'Campagna terminata' });
 
-    // Check max plays per user
-    const playCount = await countPlaysForUser(campaign_id, serial_number);
-    if (campaign.max_plays_per_user && playCount >= campaign.max_plays_per_user)
-      return res.status(400).json({ error: 'Hai giÃÂÃÂÃÂÃÂ  giocato il massimo numero di volte', already_played: true });
+    // Check-then-insert su max_plays_per_user e budget premi: senza serializzazione
+    // due richieste concorrenti possono entrambe passare i check. Advisory lock per
+    // campagna, rilasciato a fine transazione.
+    const lockClient = await pool.connect();
+    let play;
+    let result;
+    try {
+      await lockClient.query('BEGIN');
+      await lockClient.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`iw:${campaign_id}`]);
 
-    // Check budget
-    if (campaign.total_budget && campaign.total_wins >= campaign.total_budget)
-      return res.status(400).json({ error: 'Premi esauriti', budget_exhausted: true });
+      // Ricontrolla i contatori dentro il lock: i valori letti prima possono essere stantii.
+      const fresh = await getInstantWinCampaign(campaign_id);
+      const playCount = await countPlaysForUser(campaign_id, serial_number);
+      if (fresh.max_plays_per_user && playCount >= fresh.max_plays_per_user) {
+        await lockClient.query('ROLLBACK');
+        return res.status(400).json({ error: 'Hai già giocato il massimo numero di volte', already_played: true });
+      }
+      if (fresh.total_budget && fresh.total_wins >= fresh.total_budget) {
+        await lockClient.query('ROLLBACK');
+        return res.status(400).json({ error: 'Premi esauriti', budget_exhausted: true });
+      }
 
-    // Determine result
-    const rand = Math.random();
-    const isWin = rand < parseFloat(campaign.win_probability);
-    // If budget would be exceeded, force lose
-    const result = (isWin && (!campaign.total_budget || campaign.total_wins < campaign.total_budget))
-      ? 'win' : 'lose';
+      result = Math.random() < parseFloat(fresh.win_probability) ? 'win' : 'lose';
 
-    const play = await createInstantWinPlay({
-      campaign_id,
-      serial_number,
-      brand_id: pass.brand_id,
-      result,
-      prize_name: result === 'win' ? campaign.prize_name : null,
-      player_email: player_email || null,
-      player_phone: player_phone || null,
-      player_first_name: player_first_name || null,
-      player_last_name: player_last_name || null,
-      privacy_accepted: privacy_accepted || false
-    });
+      play = await createInstantWinPlay({
+        campaign_id,
+        serial_number,
+        brand_id: pass.brand_id,
+        result,
+        prize_name: result === 'win' ? fresh.prize_name : null,
+        player_email: player_email || null,
+        player_phone: player_phone || null,
+        player_first_name: player_first_name || null,
+        player_last_name: player_last_name || null,
+        privacy_accepted: privacy_accepted || false
+      });
+      await lockClient.query('COMMIT');
+    } catch (playErr) {
+      await lockClient.query('ROLLBACK').catch(() => {});
+      throw playErr;
+    } finally {
+      lockClient.release();
+    }
 
     // Log event
     await logEvent({
@@ -5080,11 +5108,6 @@ router.post('/game/:serial_number', async (req, res) => {
     if (campaign.end_date && new Date(campaign.end_date) < now)
       return res.status(400).json({ error: 'Campagna terminata' });
 
-    // Check max plays per user
-    const playCount = await countGamificationPlaysForUser(campaign_id, serial_number);
-    if (campaign.max_plays_per_user && playCount >= campaign.max_plays_per_user)
-      return res.status(400).json({ error: 'Hai giÃÂÃÂÃÂÃÂ  giocato il massimo numero di volte', already_played: true });
-
     // Determine tier based on completion time
     const timeSecs = parseFloat(completion_time_secs);
     let tier = 'none';
@@ -5100,20 +5123,40 @@ router.post('/game/:serial_number', async (req, res) => {
       prizeName = campaign.bronze_prize;
     }
 
-    const play = await createGamificationPlay({
-      campaign_id,
-      serial_number,
-      brand_id: pass.brand_id,
-      completion_time_secs: timeSecs,
-      tier,
-      prize_name: prizeName,
-      score: score || 0,
-      player_email: player_email || null,
-      player_phone: player_phone || null,
-      player_first_name: player_first_name || null,
-      player_last_name: player_last_name || null,
-      privacy_accepted: privacy_accepted || false
-    });
+    // Check max plays + insert sotto advisory lock (stessa race dell'instant win).
+    const lockClient = await pool.connect();
+    let play;
+    try {
+      await lockClient.query('BEGIN');
+      await lockClient.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`gm:${campaign_id}`]);
+
+      const playCount = await countGamificationPlaysForUser(campaign_id, serial_number);
+      if (campaign.max_plays_per_user && playCount >= campaign.max_plays_per_user) {
+        await lockClient.query('ROLLBACK');
+        return res.status(400).json({ error: 'Hai già giocato il massimo numero di volte', already_played: true });
+      }
+
+      play = await createGamificationPlay({
+        campaign_id,
+        serial_number,
+        brand_id: pass.brand_id,
+        completion_time_secs: timeSecs,
+        tier,
+        prize_name: prizeName,
+        score: score || 0,
+        player_email: player_email || null,
+        player_phone: player_phone || null,
+        player_first_name: player_first_name || null,
+        player_last_name: player_last_name || null,
+        privacy_accepted: privacy_accepted || false
+      });
+      await lockClient.query('COMMIT');
+    } catch (playErr) {
+      await lockClient.query('ROLLBACK').catch(() => {});
+      throw playErr;
+    } finally {
+      lockClient.release();
+    }
 
     // Log event
     await logEvent({

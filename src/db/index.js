@@ -117,6 +117,15 @@ function uuidv4() {
 }
 
 /** Empty connectionString makes node-pg default to localhost:5432 — do not create a pool without a URL. */
+// Le migrazioni inline usano .catch(logSchemaError): gli errori "già applicato"
+// (duplicate column/table/object, drop di oggetti assenti) sono attesi e silenziati,
+// tutto il resto va loggato — un ALTER fallito in silenzio riemerge come query rotta altrove.
+const EXPECTED_SCHEMA_CODES = new Set(['42701', '42P07', '42710', '42704']);
+function logSchemaError(err) {
+  if (!err || EXPECTED_SCHEMA_CODES.has(err.code)) return;
+  console.warn('[schema] migration step failed:', err.code || '?', err.message);
+}
+
 const pool = dbTargetInfo.ok
   ? new Pool({
       connectionString: databaseUrl,
@@ -509,64 +518,64 @@ async function getDb() {
     console.log('[ok] Database schema initialized (PostgreSQL - Filo Diretto)');
 
     // Migrations
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS campaign_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS field_values JSONB DEFAULT '{}'`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS utm JSONB DEFAULT '{}'`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS device_token TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS user_agent TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS referrer_url TEXT`).catch(()=>{});
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS campaign_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS field_values JSONB DEFAULT '{}'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS utm JSONB DEFAULT '{}'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS device_token TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS user_agent TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS referrer_url TEXT`).catch(logSchemaError);
     // Campaigns columns added after initial schema
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS description TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS template_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_source TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_medium TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_campaign TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_content TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_term TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS end_date TIMESTAMPTZ`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS total_downloads INTEGER DEFAULT 0`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS total_installs INTEGER DEFAULT 0`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true`).catch(()=>{});
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(()=>{});
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS description TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS template_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_source TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_medium TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_campaign TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_content TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS utm_term TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS end_date TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS total_downloads INTEGER DEFAULT 0`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS total_installs INTEGER DEFAULT 0`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(logSchemaError);
 
     // pass_instances Ã¢ÂÂ columns added after initial schema
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS auth_token TEXT DEFAULT gen_random_uuid()::text`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS last_updated TIMESTAMPTZ DEFAULT NOW()`).catch(()=>{});
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS auth_token TEXT DEFAULT gen_random_uuid()::text`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS last_updated TIMESTAMPTZ DEFAULT NOW()`).catch(logSchemaError);
 
     // pass_instances Ã¢ÂÂ push tracking per pass
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS last_push_at TIMESTAMPTZ`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS last_push_status TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS push_count INTEGER DEFAULT 0`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS google_update_count INTEGER DEFAULT 0`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS google_last_update_at TIMESTAMPTZ`).catch(()=>{});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS google_last_update_status TEXT`).catch(()=>{});
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS last_push_at TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS last_push_status TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS push_count INTEGER DEFAULT 0`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS google_update_count INTEGER DEFAULT 0`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS google_last_update_at TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS google_last_update_status TEXT`).catch(logSchemaError);
 
     // push_log Ã¢ÂÂ columns added after initial schema
-    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS campaign_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS sent_count INTEGER DEFAULT 0`).catch(()=>{});
-    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'apple'`).catch(()=>{});
-    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS strip_base64 TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS screen_alert VARCHAR(178)`).catch(()=>{});
+    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS campaign_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS sent_count INTEGER DEFAULT 0`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'apple'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS strip_base64 TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE push_log ADD COLUMN IF NOT EXISTS screen_alert VARCHAR(178)`).catch(logSchemaError);
 
     // scheduled_push Ã¢ÂÂ columns added after initial schema
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS campaign_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS schedule_type TEXT DEFAULT 'once'`).catch(()=>{});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS schedule_time TEXT DEFAULT '09:00'`).catch(()=>{});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS schedule_days TEXT DEFAULT ''`).catch(()=>{});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMPTZ`).catch(()=>{});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ`).catch(()=>{});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true`).catch(()=>{});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS update_pass BOOLEAN DEFAULT true`).catch(()=>{});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'apple'`).catch(()=>{});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS audience_id TEXT`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audiences_brand ON audiences(brand_id)`).catch(()=>{});
-    await pool.query(`ALTER TABLE audiences ADD COLUMN IF NOT EXISTS query_spec JSONB DEFAULT '{}'`).catch(()=>{});
-    await pool.query(`ALTER TABLE audiences ADD COLUMN IF NOT EXISTS source_prompt TEXT DEFAULT ''`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_holder_events_brand_created ON holder_events(brand_id, created_at DESC)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_holder_events_serial ON holder_events(serial_number, created_at DESC)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_holder_events_action ON holder_events(brand_id, event_action)`).catch(()=>{});
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS campaign_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS schedule_type TEXT DEFAULT 'once'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS schedule_time TEXT DEFAULT '09:00'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS schedule_days TEXT DEFAULT ''`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS update_pass BOOLEAN DEFAULT true`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'apple'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS audience_id TEXT`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audiences_brand ON audiences(brand_id)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE audiences ADD COLUMN IF NOT EXISTS query_spec JSONB DEFAULT '{}'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE audiences ADD COLUMN IF NOT EXISTS source_prompt TEXT DEFAULT ''`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_holder_events_brand_created ON holder_events(brand_id, created_at DESC)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_holder_events_serial ON holder_events(serial_number, created_at DESC)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_holder_events_action ON holder_events(brand_id, event_action)`).catch(logSchemaError);
     await pool.query(`CREATE TABLE IF NOT EXISTS push_assistant_log (
       id TEXT PRIMARY KEY,
       brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
@@ -576,8 +585,8 @@ async function getDb() {
       final_payload JSONB,
       action TEXT NOT NULL DEFAULT 'planned',
       created_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_push_assistant_log_brand ON push_assistant_log(brand_id, created_at DESC)`).catch(()=>{});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_push_assistant_log_brand ON push_assistant_log(brand_id, created_at DESC)`).catch(logSchemaError);
     // Brand product line (Ads / HR / Engage / Live) — legacy brands default to ads
     await pool.query(`
       UPDATE brands
@@ -585,7 +594,7 @@ async function getDb() {
       WHERE config->>'product_line' IS NULL
          OR config->>'product_line' = ''
          OR NOT (config->>'product_line' IN ('ads', 'hr', 'engage', 'live'))
-    `).catch(() => {});
+    `).catch(logSchemaError);
     await pool.query(`CREATE TABLE IF NOT EXISTS wai_log (
       id TEXT PRIMARY KEY,
       brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
@@ -596,8 +605,8 @@ async function getDb() {
       action TEXT DEFAULT 'planned',
       payload JSONB,
       created_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_wai_log_brand ON wai_log(brand_id, created_at DESC)`).catch(()=>{});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_wai_log_brand ON wai_log(brand_id, created_at DESC)`).catch(logSchemaError);
     await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -605,53 +614,53 @@ async function getDb() {
       expires_at TIMESTAMPTZ NOT NULL,
       used_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_password_reset_token_hash ON password_reset_tokens(token_hash)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens(user_id, created_at DESC)`).catch(()=>{});
-    await pool.query(`ALTER TABLE media ADD COLUMN IF NOT EXISTS campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_media_campaign ON media(campaign_id)`).catch(()=>{});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_password_reset_token_hash ON password_reset_tokens(token_hash)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens(user_id, created_at DESC)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE media ADD COLUMN IF NOT EXISTS campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_media_campaign ON media(campaign_id)`).catch(logSchemaError);
 
     // events Ã¢ÂÂ columns added after initial schema
-    await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS device_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'`).catch(()=>{});
+    await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS device_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'`).catch(logSchemaError);
 
     // instant_win_campaigns Ã¢ÂÂ columns added after initial schema
     // Old schema had "title" NOT NULL Ã¢ÂÂ drop constraint, keep column for compat
-    await pool.query(`ALTER TABLE instant_win_campaigns ALTER COLUMN title DROP NOT NULL`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ALTER COLUMN title SET DEFAULT ''`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT ''`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS brand_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft'`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS game_type TEXT NOT NULL DEFAULT 'scratch'`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS prize_name TEXT NOT NULL DEFAULT ''`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS prize_description TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS win_probability NUMERIC NOT NULL DEFAULT 0.1`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS max_plays_per_user INTEGER DEFAULT 1`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS total_budget INTEGER`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS total_wins INTEGER DEFAULT 0`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS end_date TIMESTAMPTZ`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS strip_base64 TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS push_message TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}'`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(()=>{});
+    await pool.query(`ALTER TABLE instant_win_campaigns ALTER COLUMN title DROP NOT NULL`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ALTER COLUMN title SET DEFAULT ''`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT ''`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS brand_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS game_type TEXT NOT NULL DEFAULT 'scratch'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS prize_name TEXT NOT NULL DEFAULT ''`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS prize_description TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS win_probability NUMERIC NOT NULL DEFAULT 0.1`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS max_plays_per_user INTEGER DEFAULT 1`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS total_budget INTEGER`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS total_wins INTEGER DEFAULT 0`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS end_date TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS strip_base64 TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS push_message TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_campaigns ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(logSchemaError);
 
     // instant_win_plays Ã¢ÂÂ columns added after initial schema
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS campaign_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS serial_number TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS brand_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS result TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS prize_name TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ DEFAULT NOW()`).catch(()=>{});
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS campaign_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS serial_number TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS brand_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS result TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS prize_name TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ DEFAULT NOW()`).catch(logSchemaError);
     // Player data collection (lead gen before game)
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS player_email TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS player_phone TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS player_first_name TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS player_last_name TEXT`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_plays_email ON instant_win_plays(player_email)`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS privacy_accepted BOOLEAN DEFAULT FALSE`).catch(()=>{});
-    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS privacy_accepted_at TIMESTAMPTZ`).catch(()=>{});
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS player_email TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS player_phone TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS player_first_name TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS player_last_name TEXT`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_plays_email ON instant_win_plays(player_email)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS privacy_accepted BOOLEAN DEFAULT FALSE`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE instant_win_plays ADD COLUMN IF NOT EXISTS privacy_accepted_at TIMESTAMPTZ`).catch(logSchemaError);
 
     // Indexes
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_passes_brand ON pass_instances(brand_id)`);
@@ -666,16 +675,18 @@ async function getDb() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_scheduled_push_due ON scheduled_push(next_run_at) WHERE active = true`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_events_brand ON events(brand_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_events_created ON events(created_at)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_events_brand_created ON events(brand_id, created_at DESC)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_events_brand_type ON events(brand_id, event_type)`).catch(logSchemaError);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_campaigns_brand ON campaigns(brand_id)`);
     // Instant Win indexes (after ALTER TABLEs ensure columns exist)
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_campaigns_brand ON instant_win_campaigns(brand_id)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_campaigns_status ON instant_win_campaigns(status)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_plays_campaign ON instant_win_plays(campaign_id)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_plays_serial ON instant_win_plays(serial_number)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_plays_brand ON instant_win_plays(brand_id)`).catch(()=>{});
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_campaigns_brand ON instant_win_campaigns(brand_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_campaigns_status ON instant_win_campaigns(status)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_plays_campaign ON instant_win_plays(campaign_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_plays_serial ON instant_win_plays(serial_number)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_iw_plays_brand ON instant_win_plays(brand_id)`).catch(logSchemaError);
 
     // Drop legacy member_id NOT NULL constraint (plays use serial_number, not member_id)
-    await pool.query(`ALTER TABLE instant_win_plays ALTER COLUMN member_id DROP NOT NULL`).catch(()=>{});
+    await pool.query(`ALTER TABLE instant_win_plays ALTER COLUMN member_id DROP NOT NULL`).catch(logSchemaError);
 
     // Google Wallet columns
     await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS google_wallet_object_id TEXT`);
@@ -710,28 +721,28 @@ async function getDb() {
       error_message TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       processed_at TIMESTAMPTZ
-    )`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS provider TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS event_hash TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS object_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS event_type TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS pass_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS brand_id TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS payload JSONB DEFAULT '{}'`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS processed BOOLEAN DEFAULT FALSE`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS process_status TEXT DEFAULT 'received'`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS error_message TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ`).catch(()=>{});
-    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_wallet_callback_event_hash ON wallet_callback_events(event_hash)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_wallet_callback_provider_created ON wallet_callback_events(provider, created_at DESC)`).catch(()=>{});
+    )`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS provider TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS event_hash TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS object_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS event_type TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS pass_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS brand_id TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS payload JSONB DEFAULT '{}'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS processed BOOLEAN DEFAULT FALSE`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS process_status TEXT DEFAULT 'received'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS error_message TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE wallet_callback_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_wallet_callback_event_hash ON wallet_callback_events(event_hash)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_wallet_callback_provider_created ON wallet_callback_events(provider, created_at DESC)`).catch(logSchemaError);
 
     // Gamification indexes
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_campaigns_brand ON gamification_campaigns(brand_id)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_campaigns_status ON gamification_campaigns(status)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_plays_campaign ON gamification_plays(campaign_id)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_plays_serial ON gamification_plays(serial_number)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_plays_brand ON gamification_plays(brand_id)`).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_plays_email ON gamification_plays(player_email)`).catch(()=>{});
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_campaigns_brand ON gamification_campaigns(brand_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_campaigns_status ON gamification_campaigns(status)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_plays_campaign ON gamification_plays(campaign_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_plays_serial ON gamification_plays(serial_number)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_plays_brand ON gamification_plays(brand_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gam_plays_email ON gamification_plays(player_email)`).catch(logSchemaError);
 
     // Employee portal tables (idempotent for existing deployments)
     await pool.query(`CREATE TABLE IF NOT EXISTS pass_consents (
@@ -746,7 +757,7 @@ async function getDb() {
       privacy_policy_version VARCHAR(32),
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(pass_id, consent_type)
-    )`).catch(() => {});
+    )`).catch(logSchemaError);
     await pool.query(`CREATE TABLE IF NOT EXISTS consent_log (
       id SERIAL PRIMARY KEY,
       pass_id TEXT NOT NULL REFERENCES pass_instances(id) ON DELETE CASCADE,
@@ -756,7 +767,7 @@ async function getDb() {
       ip_address VARCHAR(64),
       user_agent TEXT,
       privacy_policy_version VARCHAR(32)
-    )`).catch(() => {});
+    )`).catch(logSchemaError);
     await pool.query(`CREATE TABLE IF NOT EXISTS gdpr_requests (
       id TEXT PRIMARY KEY,
       pass_id TEXT NOT NULL REFERENCES pass_instances(id) ON DELETE CASCADE,
@@ -768,7 +779,7 @@ async function getDb() {
       resolved_at TIMESTAMPTZ,
       resolved_by TEXT REFERENCES users(id),
       resolution_notes TEXT
-    )`).catch(() => {});
+    )`).catch(logSchemaError);
     await pool.query(`CREATE TABLE IF NOT EXISTS portal_tokens (
       id SERIAL PRIMARY KEY,
       pass_id TEXT NOT NULL REFERENCES pass_instances(id) ON DELETE CASCADE,
@@ -777,13 +788,13 @@ async function getDb() {
       expires_at TIMESTAMPTZ NOT NULL,
       used_at TIMESTAMPTZ,
       revoked_at TIMESTAMPTZ
-    )`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pass_consents_pass ON pass_consents(pass_id)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_consent_log_pass_ts ON consent_log(pass_id, timestamp DESC)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gdpr_requests_brand_status ON gdpr_requests(brand_id, status)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gdpr_requests_pass ON gdpr_requests(pass_id, requested_at DESC)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_portal_tokens_pass ON portal_tokens(pass_id)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_portal_tokens_hash ON portal_tokens(token_hash)`).catch(() => {});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pass_consents_pass ON pass_consents(pass_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_consent_log_pass_ts ON consent_log(pass_id, timestamp DESC)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gdpr_requests_brand_status ON gdpr_requests(brand_id, status)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gdpr_requests_pass ON gdpr_requests(pass_id, requested_at DESC)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_portal_tokens_pass ON portal_tokens(pass_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_portal_tokens_hash ON portal_tokens(token_hash)`).catch(logSchemaError);
 
     // ── Filo Diretto HR: pass back, members, dynamic links ──
     await pool.query(`CREATE TABLE IF NOT EXISTS members (
@@ -807,40 +818,40 @@ async function getDb() {
       activation_source VARCHAR(32),
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
+    )`).catch(logSchemaError);
     await ensureMembersHrSchema();
 
-    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS back_fixed_link_label VARCHAR(64)`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS back_fixed_link_url VARCHAR(512)`).catch(() => {});
+    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS back_fixed_link_label VARCHAR(64)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS back_fixed_link_url VARCHAR(512)`).catch(logSchemaError);
 
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS dynamic_link_label VARCHAR(64)`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS dynamic_link_url VARCHAR(512)`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS dynamic_link_set_at TIMESTAMPTZ`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS dynamic_link_expires_at TIMESTAMPTZ`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS push_announcement JSONB`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS push_strip_base64 TEXT`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS member_id TEXT REFERENCES members(id) ON DELETE SET NULL`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ`).catch(() => {});
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS dynamic_link_label VARCHAR(64)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS dynamic_link_url VARCHAR(512)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS dynamic_link_set_at TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS dynamic_link_expires_at TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS push_announcement JSONB`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS push_strip_base64 TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS member_id TEXT REFERENCES members(id) ON DELETE SET NULL`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ`).catch(logSchemaError);
 
-    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS hr_email VARCHAR(255)`).catch(() => {});
-    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS hr_phone VARCHAR(64)`).catch(() => {});
-    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS dpo_email VARCHAR(255)`).catch(() => {});
-    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS emergency_phone VARCHAR(64)`).catch(() => {});
-    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS back_resources JSONB DEFAULT '[]'::jsonb`).catch(() => {});
-    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS back_documents JSONB DEFAULT '[]'::jsonb`).catch(() => {});
-    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS allowed_email_domains TEXT[] DEFAULT '{}'`).catch(() => {});
-    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS public_qr_enabled BOOLEAN DEFAULT false`).catch(() => {});
-    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS public_qr_slug VARCHAR(64)`).catch(() => {});
+    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS hr_email VARCHAR(255)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS hr_phone VARCHAR(64)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS dpo_email VARCHAR(255)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS emergency_phone VARCHAR(64)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS back_resources JSONB DEFAULT '[]'::jsonb`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS back_documents JSONB DEFAULT '[]'::jsonb`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS allowed_email_domains TEXT[] DEFAULT '{}'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS public_qr_enabled BOOLEAN DEFAULT false`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE brands ADD COLUMN IF NOT EXISTS public_qr_slug VARCHAR(64)`).catch(logSchemaError);
     await pool.query(
       `CREATE UNIQUE INDEX IF NOT EXISTS idx_brands_qr_slug ON brands(public_qr_slug) WHERE public_qr_slug IS NOT NULL`
-    ).catch(() => {});
+    ).catch(logSchemaError);
 
-    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS hr_email VARCHAR(255)`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS hr_phone VARCHAR(64)`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS dpo_email VARCHAR(255)`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS emergency_phone VARCHAR(64)`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS back_resources JSONB DEFAULT '[]'::jsonb`).catch(() => {});
-    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS back_documents JSONB DEFAULT '[]'::jsonb`).catch(() => {});
+    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS hr_email VARCHAR(255)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS hr_phone VARCHAR(64)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS dpo_email VARCHAR(255)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS emergency_phone VARCHAR(64)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS back_resources JSONB DEFAULT '[]'::jsonb`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_templates ADD COLUMN IF NOT EXISTS back_documents JSONB DEFAULT '[]'::jsonb`).catch(logSchemaError);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS enrollment_attempts (
       id SERIAL PRIMARY KEY,
@@ -850,13 +861,13 @@ async function getDb() {
       user_agent TEXT,
       result VARCHAR(32),
       attempted_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
+    )`).catch(logSchemaError);
     await pool.query(
       `CREATE INDEX IF NOT EXISTS idx_enrollment_attempts_ip ON enrollment_attempts(ip_address, attempted_at DESC)`
-    ).catch(() => {});
+    ).catch(logSchemaError);
     await pool.query(
       `CREATE INDEX IF NOT EXISTS idx_enrollment_attempts_brand ON enrollment_attempts(brand_id, attempted_at DESC)`
-    ).catch(() => {});
+    ).catch(logSchemaError);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS import_errors (
       id SERIAL PRIMARY KEY,
@@ -866,20 +877,20 @@ async function getDb() {
       row_data JSONB,
       error_reason VARCHAR(255),
       created_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
+    )`).catch(logSchemaError);
     await pool.query(
       `CREATE INDEX IF NOT EXISTS idx_import_errors_brand_batch ON import_errors(brand_id, import_batch_id, created_at DESC)`
-    ).catch(() => {});
+    ).catch(logSchemaError);
 
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS include_pass_link BOOLEAN DEFAULT false`).catch(() => {});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS pass_link_url VARCHAR(512)`).catch(() => {});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS pass_link_label VARCHAR(64)`).catch(() => {});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS pass_link_expires_at TIMESTAMPTZ`).catch(() => {});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS back_details TEXT`).catch(() => {});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS strip_base64 TEXT`).catch(() => {});
-    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS screen_alert VARCHAR(178)`).catch(() => {});
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS include_pass_link BOOLEAN DEFAULT false`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS pass_link_url VARCHAR(512)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS pass_link_label VARCHAR(64)`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS pass_link_expires_at TIMESTAMPTZ`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS back_details TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS strip_base64 TEXT`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS screen_alert VARCHAR(178)`).catch(logSchemaError);
 
-    await pool.query(`UPDATE pass_instances SET activated_at = created_at WHERE activated_at IS NULL`).catch(() => {});
+    await pool.query(`UPDATE pass_instances SET activated_at = created_at WHERE activated_at IS NULL`).catch(logSchemaError);
 
     await pool.query(`
       INSERT INTO members (id, brand_id, pass_id, first_name, last_name, employee_id, department, office_location, manager_name, manager_email)
@@ -902,14 +913,14 @@ async function getDb() {
           OR pi.field_values->>'matricola' IS NOT NULL
           OR pi.field_values->>'badge_id' IS NOT NULL
         )
-    `).catch(() => {});
+    `).catch(logSchemaError);
 
     await pool.query(`
       UPDATE pass_instances pi
       SET member_id = m.id
       FROM members m
       WHERE m.pass_id = pi.id AND pi.member_id IS NULL
-    `).catch(() => {});
+    `).catch(logSchemaError);
 
     // HUB Convenzioni
     await pool.query(`CREATE TABLE IF NOT EXISTS merchants (
@@ -930,10 +941,10 @@ async function getDb() {
       physical_enabled BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchants_brand ON merchants(brand_id)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchants_active ON merchants(brand_id, active) WHERE active = TRUE`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchants_category ON merchants(brand_id, category)`).catch(() => {});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchants_brand ON merchants(brand_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchants_active ON merchants(brand_id, active) WHERE active = TRUE`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchants_category ON merchants(brand_id, category)`).catch(logSchemaError);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS merchant_locations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -947,9 +958,9 @@ async function getDb() {
       longitude DECIMAL(11, 8),
       geofence_radius_m INTEGER DEFAULT 150,
       created_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchant_locations_merchant ON merchant_locations(merchant_id)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchant_locations_geo ON merchant_locations(latitude, longitude)`).catch(() => {});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchant_locations_merchant ON merchant_locations(merchant_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchant_locations_geo ON merchant_locations(latitude, longitude)`).catch(logSchemaError);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS convention_activations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -961,10 +972,10 @@ async function getDb() {
       location_id UUID REFERENCES merchant_locations(id),
       metadata JSONB,
       created_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activations_brand_merchant ON convention_activations(brand_id, merchant_id)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activations_pass ON convention_activations(pass_serial)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activations_created ON convention_activations(created_at DESC)`).catch(() => {});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activations_brand_merchant ON convention_activations(brand_id, merchant_id)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activations_pass ON convention_activations(pass_serial)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activations_created ON convention_activations(created_at DESC)`).catch(logSchemaError);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS hub_settings (
       brand_id TEXT PRIMARY KEY REFERENCES brands(id) ON DELETE CASCADE,
@@ -975,7 +986,7 @@ async function getDb() {
       geofencing_enabled BOOLEAN DEFAULT TRUE,
       geofencing_max_per_day INTEGER DEFAULT 3,
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
+    )`).catch(logSchemaError);
 
     // PGA — People Growth Activator
     await pool.query(`CREATE TABLE IF NOT EXISTS coin_actions_config (
@@ -987,7 +998,7 @@ async function getDb() {
       active BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(brand_id, action_key)
-    )`).catch(() => {});
+    )`).catch(logSchemaError);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS coin_ledger (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1001,10 +1012,10 @@ async function getDb() {
       related_entity_id UUID,
       metadata JSONB,
       created_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_ledger_pass ON coin_ledger(pass_serial, created_at DESC)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_ledger_brand ON coin_ledger(brand_id, created_at DESC)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_ledger_action ON coin_ledger(brand_id, action_key)`).catch(() => {});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_ledger_pass ON coin_ledger(pass_serial, created_at DESC)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_ledger_brand ON coin_ledger(brand_id, created_at DESC)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_ledger_action ON coin_ledger(brand_id, action_key)`).catch(logSchemaError);
 
     await pool.query(`
       CREATE OR REPLACE VIEW pass_coin_balance AS
@@ -1017,7 +1028,7 @@ async function getDb() {
         COUNT(*) FILTER (WHERE coin_amount < 0) AS total_redemptions
       FROM coin_ledger
       GROUP BY pass_serial, brand_id
-    `).catch(() => {});
+    `).catch(logSchemaError);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS experiences_catalog (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1038,9 +1049,9 @@ async function getDb() {
       display_order INTEGER DEFAULT 100,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(brand_id, key)
-    )`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiences_brand_active ON experiences_catalog(brand_id, active) WHERE active = TRUE`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiences_category ON experiences_catalog(brand_id, category)`).catch(() => {});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiences_brand_active ON experiences_catalog(brand_id, active) WHERE active = TRUE`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiences_category ON experiences_catalog(brand_id, category)`).catch(logSchemaError);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS experience_bookings (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1055,10 +1066,10 @@ async function getDb() {
       metadata JSONB,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bookings_brand ON experience_bookings(brand_id, status)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bookings_pass ON experience_bookings(pass_serial, created_at DESC)`).catch(() => {});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bookings_experience ON experience_bookings(experience_id, status)`).catch(() => {});
+    )`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bookings_brand ON experience_bookings(brand_id, status)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bookings_pass ON experience_bookings(pass_serial, created_at DESC)`).catch(logSchemaError);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bookings_experience ON experience_bookings(experience_id, status)`).catch(logSchemaError);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS pga_settings (
       brand_id TEXT PRIMARY KEY REFERENCES brands(id) ON DELETE CASCADE,
@@ -1069,7 +1080,7 @@ async function getDb() {
       notify_hr_on_booking BOOLEAN DEFAULT TRUE,
       notify_hr_email TEXT,
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(() => {});
+    )`).catch(logSchemaError);
 
     // Seed admin
     await seedAdminUser();
@@ -1639,19 +1650,19 @@ async function ensureMembersHrSchema() {
     `).catch((err) => console.warn('[schema] members pass_id backfill:', err.message));
   }
 
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_members_brand ON members(brand_id)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_members_brand ON members(brand_id)`).catch(logSchemaError);
   await pool.query(
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_members_pass ON members(pass_id) WHERE pass_id IS NOT NULL`
-  ).catch(() => {});
+  ).catch(logSchemaError);
   await pool.query(
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_members_brand_employee ON members(brand_id, employee_id) WHERE employee_id IS NOT NULL`
-  ).catch(() => {});
+  ).catch(logSchemaError);
   await pool.query(
     `CREATE INDEX IF NOT EXISTS idx_members_activation_token ON members(activation_token) WHERE activation_token IS NOT NULL`
-  ).catch(() => {});
+  ).catch(logSchemaError);
   await pool.query(
     `CREATE INDEX IF NOT EXISTS idx_members_activation_status ON members(brand_id, activation_status)`
-  ).catch(() => {});
+  ).catch(logSchemaError);
 }
 
 async function getMemberForPass(passId) {

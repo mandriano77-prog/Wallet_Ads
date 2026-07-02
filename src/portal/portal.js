@@ -170,8 +170,13 @@
   }
 
   function apiUrl(path) {
-    const sep = path.includes('?') ? '&' : '?';
-    return '/api/v1/portal' + path + sep + 't=' + encodeURIComponent(portalToken);
+    return '/api/v1/portal' + path;
+  }
+
+  // Il token viaggia nell'header, non in query string: le URL finiscono nei log
+  // del server (morgan), nella history e nei referrer — l'header no.
+  function authHeaders() {
+    return portalToken ? { 'X-Portal-Token': portalToken } : {};
   }
 
   async function apiJson(path, options) {
@@ -179,6 +184,7 @@
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders(),
         ...(options?.headers || {})
       }
     });
@@ -188,7 +194,10 @@
   }
 
   async function apiBlob(path, options) {
-    const res = await fetch(apiUrl(path), options);
+    const res = await fetch(apiUrl(path), {
+      ...options,
+      headers: { ...authHeaders(), ...(options?.headers || {}) }
+    });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.error || 'Download non riuscito');
