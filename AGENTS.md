@@ -112,7 +112,7 @@ Copy breve; emoji e punteggiatura contano. URL lunghi → **Includi link nel pas
 
 Meccanismo validato su iPhone reale (luglio 2026). Blindato da `scripts/push-wallet-lock.test.js`: **se un test LOCK fallisce, la modifica è vietata** salvo approvazione esplicita del proprietario del repo.
 
-1. **Notifica lock screen** = campo FRONT `announcement` (auxiliary) con `value` = **solo token invisibile** (nessuna 4ª colonna visibile) e `changeMessage` = **testo `screen_alert` + `%@`**. iOS ignora `changeMessage` senza `%@`; i back field aggiornano in silenzio e non devono mai avere `changeMessage` vuoto; l'header è inaffidabile.
+1. **Notifica lock screen** = campo `announcement` nei **headerFields** (nessuna colonna vuota nella riga NOME/AREA/COIN) con `value` = **solo token invisibile** e `changeMessage` = **testo `screen_alert` + `%@`**. La didascalia decorativa `info_hint` convive col carrier e non va soppressa. iOS ignora `changeMessage` senza `%@`; i back field aggiornano in silenzio e non devono mai avere `changeMessage` vuoto.
 2. **`screen_alert` obbligatorio** (max 178) su `/push/send` e `/push/scheduled`; persiste su `scheduled_push.screen_alert`; scheduler e W.AI lo derivano da `titolo: messaggio` quando assente.
 3. **`relevantDate` mai sui pass HR** — causa la notifica generica "Carta punto vendita modificata".
 4. **Icona notifica quadrata** (`wallet_icon`) come unico brand mark per email/portal/hub (`/mark`); email senza allegato logo quando esiste URL HTTPS.

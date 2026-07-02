@@ -964,7 +964,7 @@ router.get('/passes/:id/wallet-icon-debug', async (req, res) => {
           auxiliary_count: (structure.auxiliaryFields || []).length,
           secondary_keys: (structure.secondaryFields || []).map((f) => f.key),
           auxiliary_keys: (structure.auxiliaryFields || []).map((f) => f.key),
-          has_push_announcement_auxiliary: (structure.auxiliaryFields || []).some((f) => f.key === 'announcement'),
+          has_push_announcement_field: [...(structure.headerFields || []), ...(structure.auxiliaryFields || [])].some((f) => f.key === 'announcement'),
           coin_has_change_message: (structure.secondaryFields || []).some((f) => f.key === 'coin_balance' && !!f.changeMessage),
           webServiceURL: parsedPassJson.webServiceURL || null,
           has_authentication_token: !!parsedPassJson.authenticationToken,

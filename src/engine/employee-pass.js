@@ -200,14 +200,14 @@ function buildPushScreenAlertAuxField(pushAnn) {
 
 /**
  * Apple Wallet update banners are driven by changeMessage on a changed pass
- * front field. Back fields update silently, and header fields have proven
- * unreliable on device for custom lock-screen copy.
+ * front field. Back fields update silently.
  *
- * The value is an invisible token (changes each push, no visible 4th column);
- * the alert copy lives in the changeMessage template. iOS requires %@ in
+ * The field lives in headerFields (outside the NOME/AREA/COIN row, so no empty
+ * 4th column). The value is an invisible token that changes each push; the
+ * alert copy lives in the changeMessage template. iOS requires %@ in
  * changeMessage — it substitutes the (invisible) value, so only the copy shows.
  */
-function buildPushAnnouncementAuxField(pushAnn) {
+function buildPushAnnouncementField(pushAnn) {
   const alertText = buildPushChangeMessage(pushAnn);
   if (!alertText) return null;
   const pushTs = Number(pushAnn?.ts || Date.now());
@@ -217,6 +217,11 @@ function buildPushAnnouncementAuxField(pushAnn) {
     value: invisibleChangeToken(pushTs).slice(0, 12),
     changeMessage: `${alertText}%@`
   };
+}
+
+/** @deprecated old name — the alert now rides on a header field. */
+function buildPushAnnouncementAuxField(pushAnn) {
+  return buildPushAnnouncementField(pushAnn);
 }
 
 function buildPushHeaderAlertField(headerHint) {
@@ -542,8 +547,8 @@ function buildEmployeePass({ brand, template, instance, member, brandConfig, api
   secondary.push(buildCoinFieldValue(coinBalance));
 
   const auxiliary = [];
-  const pushAnnouncementField = buildPushAnnouncementAuxField(pushAnn);
-  if (pushAnnouncementField) auxiliary.push(pushAnnouncementField);
+  // Apple lock-screen alert — separate property, rendered into headerFields (Apple only).
+  const pushAlert = buildPushAnnouncementField(pushAnn);
 
   const backSections = buildBackSections({
     brand,
@@ -566,6 +571,7 @@ function buildEmployeePass({ brand, template, instance, member, brandConfig, api
     serial_number: instance?.serial_number || null,
     brandName: brand?.name || '',
     headerHint,
+    pushAlert,
     logoText: '',
     programName: (template?.name || brand?.name || '').slice(0, 64),
     templateName: template?.name || '',
@@ -632,13 +638,9 @@ function resolvePassHeaderHint(template, brandConfig) {
   const key = String(tplH?.key ?? brandH?.key ?? '').trim();
   if (isCoinPassField(label, key)) return null;
   const normalizedLabel = label.toUpperCase();
-  const normalizedValue = value.toLowerCase();
-  if (
-    normalizedLabel === 'INFO PUSH'
-    || normalizedLabel.startsWith('CLICCA')
-    || normalizedValue.startsWith('per altre informazioni')
-    || normalizedValue.startsWith('clicca')
-  ) return null;
+  // Legacy push-notice label only — the decorative caption (es. "CLICCA SUI…")
+  // is fine now that the notification rides on its own header field.
+  if (normalizedLabel === 'INFO PUSH') return null;
   if (!label && !value) return null;
   return {
     key: 'info_hint',
@@ -650,8 +652,13 @@ function resolvePassHeaderHint(template, brandConfig) {
 
 /** Apple Wallet — pass.json storeCard slice (employee pass layout). */
 function toApplePass(employeePass) {
+  const headerFields = [];
+  if (employeePass.headerHint) headerFields.push(employeePass.headerHint);
+  // Invisible alert carrier: header slot renders nothing but its value change
+  // + changeMessage template drive the custom lock-screen banner.
+  if (employeePass.pushAlert) headerFields.push(employeePass.pushAlert);
   const passStructure = {
-    headerFields: employeePass.headerHint ? [employeePass.headerHint] : [],
+    headerFields,
     primaryFields: employeePass.front.primary || [],
     secondaryFields: employeePass.front.secondary || [],
     auxiliaryFields: employeePass.front.auxiliary || []
@@ -892,6 +899,7 @@ module.exports = {
   resolvePushAnnouncement,
   applyPushWalletAlertField: buildPushLockScreenBackSection,
   buildPushLockScreenBackSection,
+  buildPushAnnouncementField,
   buildPushScreenAlertAuxField,
   buildPushAnnouncementAuxField,
   buildPushHeaderAlertField,

@@ -28,13 +28,8 @@ test('buildPushPassPreview returns lock screen and front fields', async () => {
   assert.match(preview.lock_screen.body, /Solo fino a domenica/);
   assert.equal(preview.header, null);
   assert.ok(preview.secondary.some((f) => f.label === 'NOME'));
-  const announcement = preview.auxiliary.find((f) => f.key === 'announcement');
-  assert.ok(announcement);
-  // Nessuna 4ª colonna visibile: testo solo nel changeMessage, valore invisibile.
-  assert.equal(announcement.label, '');
-  assert.equal(String(announcement.value).replace(/[\u200b\u200c\u200d\u2060]/g, ''), '');
-  assert.match(announcement.changeMessage, /2X1 OCCHIALI/);
-  assert.match(announcement.changeMessage, /%@/);
+  // Il carrier notifica vive nei headerFields: nessun campo auxiliary visibile.
+  assert.equal(preview.auxiliary.find((f) => f.key === 'announcement'), undefined);
   assert.ok(preview.back.some((r) => r.key === 'dynamic_push_link'));
   assert.ok(preview.back.some((r) => r.key === 'push_back_details'));
   assert.equal(preview.back.find((r) => r.key === 'wallet_push_alert'), undefined);

@@ -35,17 +35,19 @@ function visiblePassValue(value) {
 
 // ── 1. Meccanismo notifica lock screen (front announcement + changeMessage %@) ──
 
-test('LOCK: alert Wallet su campo front announcement con changeMessage template %@', () => {
+test('LOCK: alert Wallet su campo header announcement con changeMessage template %@', () => {
   const src = read('src/engine/employee-pass.js');
-  assert.match(src, /function buildPushAnnouncementAuxField/);
+  assert.match(src, /function buildPushAnnouncementField/);
   assert.match(src, /key: 'announcement'/);
   assert.match(src, /changeMessage: `\$\{alertText\}%@`/);
+  // Il carrier vive nei headerFields (nessuna colonna vuota nella riga NOME/AREA/COIN).
+  assert.match(src, /headerFields\.push\(employeePass\.pushAlert\)/);
   // Vietato tornare agli approcci falliti: aux screen_alert / back wallet_push_alert.
   assert.doesNotMatch(src, /key: 'screen_alert'/);
   assert.doesNotMatch(src, /key: 'wallet_push_alert'/);
 });
 
-test('LOCK: announcement con valore invisibile e testo nel changeMessage', () => {
+test('LOCK: announcement in header con valore invisibile e testo nel changeMessage', () => {
   const { buildEmployeePass, toApplePass } = require('../src/engine/employee-pass');
   const ep = buildEmployeePass({
     brand: { id: 'b1', name: 'NTI', slug: 'nti', config: {} },
@@ -63,17 +65,47 @@ test('LOCK: announcement con valore invisibile e testo nel changeMessage', () =>
     brandConfig: {},
   });
   const apple = toApplePass(ep);
-  const alert = (apple.passStructure.auxiliaryFields || []).find((f) => f.key === 'announcement');
-  assert.ok(alert, 'campo announcement mancante: la notifica custom non parte');
+  const alert = (apple.passStructure.headerFields || []).find((f) => f.key === 'announcement');
+  assert.ok(alert, 'campo announcement mancante nei headerFields: la notifica custom non parte');
   // changeMessage DEVE contenere %@ (iOS lo esige) preceduto dal testo screen_alert.
   assert.equal(alert.changeMessage, '2X1 OCCHIALI: Solo questa settimana%@');
-  // Nessuna 4ª colonna visibile: valore = solo token invisibile che cambia col ts.
+  // Valore = solo token invisibile che cambia col ts (header visivamente vuoto).
   assert.equal(visiblePassValue(alert.value), '');
   assert.ok(alert.value.length > 0, 'serve un valore che cambia per far scattare la notifica');
   assert.equal(alert.label, '');
+  // La riga NOME/AREA/COIN resta a 3 colonne: nessun campo auxiliary.
+  assert.equal((apple.passStructure.auxiliaryFields || []).length, 0);
   // Il COIN mantiene il proprio changeMessage dedicato.
   const coin = (apple.passStructure.secondaryFields || []).find((f) => f.key === 'coin_balance');
   assert.equal(coin.changeMessage, 'Hai %@ coin');
+});
+
+test('LOCK: didascalia header decorativa convive col carrier notifica', () => {
+  const { buildEmployeePass, toApplePass } = require('../src/engine/employee-pass');
+  const ep = buildEmployeePass({
+    brand: { id: 'b1', name: 'NTI', slug: 'nti', config: {} },
+    template: {
+      name: 'HR',
+      style: {},
+      fields: { headerFields: [{ key: 'info_hint', label: 'CLICCA SUI', value: 'Per ulteriori info' }] }
+    },
+    instance: {
+      serial_number: 'SN1',
+      push_announcement: {
+        title: 'PROMO',
+        message: 'Solo oggi',
+        screen_alert: 'PROMO: Solo oggi',
+        ts: 1710000000001,
+      },
+    },
+    member: { full_name: 'Test', department: 'HR' },
+    brandConfig: {},
+  });
+  assert.ok(ep.headerHint, 'la didascalia decorativa non deve più essere soppressa');
+  assert.equal(ep.headerHint.label, 'CLICCA SUI');
+  const apple = toApplePass(ep);
+  const keys = (apple.passStructure.headerFields || []).map((f) => f.key);
+  assert.deepEqual(keys, ['info_hint', 'announcement']);
 });
 
 test('LOCK: i campi retro non hanno mai changeMessage vuoto (causa notifica generica)', () => {
@@ -120,6 +152,7 @@ test('LOCK: senza push attiva nessun campo announcement sul fronte', () => {
   });
   const apple = toApplePass(ep);
   assert.equal((apple.passStructure.auxiliaryFields || []).length, 0);
+  assert.equal((apple.passStructure.headerFields || []).find((f) => f.key === 'announcement'), undefined);
   assert.deepEqual(
     (apple.passStructure.secondaryFields || []).map((f) => f.key),
     ['name', 'area', 'coin_balance']

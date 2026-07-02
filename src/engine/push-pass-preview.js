@@ -38,7 +38,8 @@ function buildPreviewAnnouncement(body) {
 }
 
 function resolveWalletAlertChangeMessage(employeePass) {
-  const frontAlert = (employeePass.front?.auxiliary || []).find((s) => s.key === 'announcement' || s.key === 'wallet_push_alert');
+  const frontAlert = employeePass.pushAlert
+    || (employeePass.front?.auxiliary || []).find((s) => s.key === 'announcement' || s.key === 'wallet_push_alert');
   if (frontAlert) {
     const value = String(frontAlert.value || '').replace(/[\u200b\u200c\u200d\u2060]/g, '').trim();
     const changeMessage = String(frontAlert.changeMessage || '').trim();
