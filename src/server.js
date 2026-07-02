@@ -9,6 +9,7 @@ try {
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const morgan = require('morgan');
 const fs = require('fs');
 const { getDb } = require('./db');
@@ -67,6 +68,16 @@ app.use((req, res, next) => {
 });
 
 // Middleware
+// Helmet: security headers (HSTS, X-Content-Type-Options, X-Frame-Options, ecc.).
+// CSP disattivata: le SPA (dashboard, hub, landing, giochi) usano script/style inline
+// e QRCode.js da CDN — una CSP di default le romperebbe; va introdotta a parte con
+// una policy dedicata. CORP cross-origin: gli asset pubblici (loghi pass, immagini
+// wallet) vengono caricati anche dai sottodomini hub.*/partner.*.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(cors(corsOptions()));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '15mb' }));
