@@ -865,7 +865,7 @@ function buildGoogleNotifyMessagePayload({ title, message, messageId }) {
   const header = String(title || 'NOVITÀ').trim().toUpperCase().slice(0, PUSH_TITLE_MAX) || 'NOVITÀ';
   const body = String(message || '').trim().slice(0, PUSH_MESSAGE_MAX);
   if (!body) throw new Error('Google notify message body required');
-  const id = String(messageId || `push_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`)
+  const id = String(messageId || `push_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`)
     .replace(/[^A-Za-z0-9._-]/g, '_')
     .slice(0, 64);
   return {
@@ -884,7 +884,7 @@ async function addPassNotifyMessage(serialNumber, { title, message }, brand, opt
   const objectId = String(options.objectId || '').trim() || buildObjectId(serialNumber, brand);
   const legacyObjectId = buildLegacyObjectId(serialNumber);
   const messageId = options.messageId
-    || `push_${serialNumber}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    || `push_${serialNumber}_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
   const payload = buildGoogleNotifyMessagePayload({ title, message, messageId });
 
   async function postAddMessage(targetId, body) {

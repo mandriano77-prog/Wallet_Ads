@@ -78,6 +78,44 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
+
+// CSP in modalità Report-Only: non blocca nulla, censisce le violazioni su
+// /csp-report per calibrare la policy prima di promuoverla a enforcing.
+// 'unsafe-inline'/'unsafe-eval' riflettono lo stato attuale delle SPA (JS inline);
+// host esterni censiti: Google Fonts, cdnjs (QRCode), unpkg.
+app.use(
+  helmet.contentSecurityPolicy({
+    reportOnly: true,
+    useDefaults: false,
+    directives: {
+      'default-src': ["'self'"],
+      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdnjs.cloudflare.com', 'https://unpkg.com'],
+      'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+      'connect-src': ["'self'", 'https:'],
+      'frame-ancestors': ["'self'"],
+      'object-src': ["'none'"],
+      'base-uri': ["'self'"],
+      'report-uri': ['/csp-report'],
+    },
+  })
+);
+
+// Raccoglie le violazioni della CSP Report-Only (log Railway, max 1/sec per non
+// inondare i log se una pagina genera violazioni in loop).
+let lastCspReportAt = 0;
+app.post('/csp-report',
+  express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '16kb' }),
+  (req, res) => {
+    const now = Date.now();
+    if (now - lastCspReportAt > 1000) {
+      lastCspReportAt = now;
+      const body = req.body?.['csp-report'] || req.body;
+      console.warn('[CSP-report]', JSON.stringify(body).slice(0, 500));
+    }
+    res.status(204).send();
+  });
 app.use(cors(corsOptions()));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '15mb' }));

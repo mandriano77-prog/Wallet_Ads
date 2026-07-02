@@ -11,7 +11,21 @@ const {
   logEvent,
 } = require('../db');
 
+const rateLimit = require('express-rate-limit');
+
 const router = express.Router();
+
+// I callback Samsung arrivano dai loro server (pochi req/min per pass reale):
+// 120 req/min per IP e' ampio per il traffico legittimo e blocca flood/scan.
+router.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests' },
+  })
+);
 
 function samsungInboundHeadersOk(req, method) {
   const rid = req.get('x-request-id');
