@@ -882,9 +882,11 @@ test('Public HR activation surfaces inherit brand theme and logo', () => {
   assert.match(mailer, /object-fit:cover/);
   assert.match(hrActivation, /function publicBrandLogoUrl/);
   assert.match(hrActivation, /absolutePublicBrandMarkUrl/);
-  assert.match(routes, /function buildPublicBrandLogoUrl/);
-  assert.match(routes, /const logoUrl = buildPublicBrandLogoUrl\(brand\)/);
-  assert.match(routes, /brandLogo:\s*logoUrl \? \{ url: logoUrl \} : null/);
+  // Helpers logo/URL pubblici estratti in auth-helpers.js (split di routes.js).
+  const authHelpers = read('src/api/auth-helpers.js');
+  assert.match(authHelpers, /function buildPublicBrandLogoUrl/);
+  assert.match(authHelpers, /const logoUrl = buildPublicBrandLogoUrl\(brand\)/);
+  assert.match(authHelpers, /brandLogo:\s*logoUrl \? \{ url: logoUrl \} : null/);
   assert.match(hrActivation, /activationEmailBrandContext/);
   assert.match(hubPwa, /public-brand-theme/);
   assert.match(hubPwa, /accent_color:\s*theme\?\.accent \|\| settings\?\.accent_color \|\| '#8B5CF6'/);

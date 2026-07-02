@@ -118,6 +118,15 @@ const { resolveBaseUrl, getProductBrandName } = require('../engine/base-url');
 const { requiredSecret, requireDebugAccess } = require('../engine/security-config');
 const sharp = require('sharp');
 const jwt = require('jsonwebtoken');
+const { publicBrandTheme } = require('../engine/public-brand-theme');
+const {
+  JWT_SECRET,
+  dashboardLoginAllowlist, isDashboardOperatorEmail, rejectIfDeployOperatorNotAllowed,
+  ensurePlatformAdminIfAllowlisted, applyAllowlistOperatorContext,
+  buildDashboardPublicUrl, dashboardProductTitle,
+  buildPublicBrandLogoUrl, publicBrandLogoPath,
+  resolveUserInviteBrandContext, sendDashboardUserInviteEmail,
+} = require('./auth-helpers');
 const { execFile } = require('child_process');
 const os = require('os');
 
@@ -130,20 +139,7 @@ function uuidv4() {
   return randomUUID();
 }
 
-const DEPLOY_PRODUCT_LINES = ['ads', 'hr', 'engage', 'live'];
-/** Filo_Diretto repo: deploy is HR-only. */
-function deployProductLineLock() {
-  return 'hr';
-}
-function brandProductLine(brand) {
-  const pl = brand?.config?.product_line;
-  return DEPLOY_PRODUCT_LINES.includes(pl) ? pl : 'hr';
-}
-function brandAllowedOnDeploy(brand) {
-  const lock = deployProductLineLock();
-  if (!lock) return true;
-  return brandProductLine(brand) === lock;
-}
+const { DEPLOY_PRODUCT_LINES, deployProductLineLock, brandProductLine, brandAllowedOnDeploy } = require('./deploy-lock');
 
 function assertHttpsUrl(url, fieldName = 'URL') {
   const u = String(url || '').trim();
@@ -186,40 +182,6 @@ function validateTemplateBackPayload(body) {
   validateBrandBackLinks(body);
 }
 
-/** Comma-separated deploy operator emails (platform bootstrap + protected admins on HR deploys). */
-function dashboardLoginAllowlist() {
-  const raw = String(process.env.DASHBOARD_LOGIN_ALLOWLIST || '').trim();
-  if (raw) {
-    return raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
-  }
-  if (deployProductLineLock() === 'hr') return ['admin@nudj.studio'];
-  return null;
-}
-
-function isDashboardOperatorEmail(email) {
-  const list = dashboardLoginAllowlist();
-  if (!list) return false;
-  return list.includes(String(email || '').trim().toLowerCase());
-}
-
-/** Whether a stored dashboard account may sign in on a locked HR deploy. */
-function canDashboardUserLogin(user) {
-  const list = dashboardLoginAllowlist();
-  if (!list) return true;
-  const email = String(user?.email || '').trim().toLowerCase();
-  if (isDashboardOperatorEmail(email)) return true;
-  // Default dev seed must not bypass operator lock on existing HR databases.
-  if (email === 'admin@ads2wallet.com' || email === 'admin@filodiretto.app') return false;
-  return Boolean(user?.id);
-}
-
-function rejectIfDeployOperatorNotAllowed(req, res) {
-  if (dashboardLoginAllowlist() && !isDashboardOperatorEmail(req.user?.email)) {
-    res.status(403).json({ error: 'Accesso non autorizzato su questa istanza dashboard' });
-    return true;
-  }
-  return false;
-}
 
 /** Canali wallet singoli. Legacy `both` resta nei record DB ma non è più selezionabile in UI. */
 const PUSH_CHANNEL_KEYS = ['apple', 'google', 'samsung'];
@@ -311,164 +273,11 @@ async function notifySamsungSavedPasses(passes) {
   return samsungWallet.notifySavedPassesUpdates(passes);
 }
 
-const JWT_SECRET = requiredSecret('JWT_SECRET', { fallback: 'nudj-secret-change-me-in-prod' });
-const JWT_EXPIRES = '7d';
-
-
 // =====================================================================// PUBLIC ENDPOINTS (before auth middleware)
 // =====================================================================
 // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Auth ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
-router.post('/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email e password richiesti' });
-    const user = await getUserByEmail(email);
-    if (!user) return res.status(401).json({ error: 'Credenziali non valide' });
-    if (!canDashboardUserLogin(user)) {
-      return res.status(403).json({ error: 'Accesso non autorizzato su questa istanza dashboard' });
-    }
-    const valid = await verifyPassword(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Credenziali non valide' });
-    const operator = await ensurePlatformAdminIfAllowlisted(user);
-    const token = jwt.sign({ id: operator.id, email: operator.email, name: operator.name, role: operator.role, brand_id: operator.brand_id }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
-    res.json({ token, user: { id: operator.id, email: operator.email, name: operator.name, role: operator.role, brand_id: operator.brand_id } });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Errore login' });
-  }
-});
-
-const forgotPasswordBuckets = new Map();
-
-function enforceForgotPasswordRateLimit(key) {
-  const now = Date.now();
-  const windowMs = 15 * 60 * 1000;
-  const max = 5;
-  const bucket = forgotPasswordBuckets.get(key) || [];
-  const recent = bucket.filter((t) => now - t < windowMs);
-  if (recent.length >= max) {
-    const err = new Error('Troppe richieste. Riprova tra qualche minuto.');
-    err.status = 429;
-    throw err;
-  }
-  recent.push(now);
-  forgotPasswordBuckets.set(key, recent);
-}
-
-function buildDashboardPublicUrl(req, query = '') {
-  const domain = process.env.CUSTOM_DOMAIN || req.headers.host || 'localhost';
-  const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
-  const q = query ? (query.startsWith('?') ? query : `?${query}`) : '';
-  return `${proto}://${domain}/dashboard${q}`;
-}
-
-function dashboardProductTitle() {
-  return String(process.env.DASHBOARD_PRODUCT_TITLE || '').trim() || 'FiloDiretto';
-}
-
-function buildPublicBrandLogoUrl(brand) {
-  if (!brand?.slug) return null;
-  const raw = String(process.env.CUSTOM_DOMAIN || process.env.BASE_URL || '').trim();
-  if (!raw) return null;
-  const host = raw.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  const { publicBrandMarkVersion } = require('../engine/brand-wallet-logo');
-  const version = publicBrandMarkVersion(brand);
-  return `https://${host}/api/v1/brands/by-slug/${encodeURIComponent(brand.slug)}/mark?v=${encodeURIComponent(version)}`;
-}
-
-const { publicBrandTheme } = require('../engine/public-brand-theme');
-
-function publicBrandLogoPath(brand) {
-  const slug = brand?.slug;
-  if (!slug) return null;
-  const { publicBrandMarkVersion } = require('../engine/brand-wallet-logo');
-  const version = publicBrandMarkVersion(brand);
-  return `/api/v1/brands/by-slug/${encodeURIComponent(slug)}/mark?v=${encodeURIComponent(version)}`;
-}
-
-async function resolveUserInviteBrandContext(user) {
-  if (!user?.brand_id) return { brandName: null, brandLogo: null, brandLogoAttachment: null };
-  const brand = await getBrand(user.brand_id);
-  if (!brand) return { brandName: null, brandLogo: null, brandLogoAttachment: null };
-  const logoUrl = buildPublicBrandLogoUrl(brand);
-
-  return {
-    brandName: brand.name || null,
-    brandLogo: logoUrl ? { url: logoUrl } : null,
-    brandLogoAttachment: null,
-  };
-}
-
-async function sendDashboardUserInviteEmail(req, user) {
-  const token = await createPasswordResetToken(user.id, 72 * 60 * 60 * 1000);
-  const activateUrl = buildDashboardPublicUrl(req, `reset=${encodeURIComponent(token)}`);
-  const { brandName, brandLogo, brandLogoAttachment } = await resolveUserInviteBrandContext(user);
-  const { sendUserInviteEmail } = require('../engine/mailer');
-  await sendUserInviteEmail({
-    to: user.email,
-    name: user.name,
-    role: user.role || 'manager',
-    brandName,
-    brandLogo,
-    brandLogoAttachment,
-    activateUrl,
-    productTitle: dashboardProductTitle()
-  });
-}
-
-router.post('/auth/forgot-password', async (req, res) => {
-  try {
-    const email = String(req.body.email || '').trim().toLowerCase();
-    if (!email) return res.status(400).json({ error: 'Email richiesta' });
-    enforceForgotPasswordRateLimit(email);
-
-    const generic = {
-      success: true,
-      message: 'Se l\'email è registrata, riceverai le istruzioni per reimpostare la password.'
-    };
-
-    const user = await getUserByEmail(email);
-    if (user) {
-      const token = await createPasswordResetToken(user.id);
-      const resetUrl = buildDashboardPublicUrl(req, `reset=${encodeURIComponent(token)}`);
-      try {
-        const { sendPasswordResetEmail } = require('../engine/mailer');
-        await sendPasswordResetEmail({ to: user.email, name: user.name, resetUrl });
-      } catch (emailErr) {
-        console.error('Password reset email failed:', emailErr.message);
-      }
-    }
-
-    res.json(generic);
-  } catch (err) {
-    if (err.status === 429) return res.status(429).json({ error: err.message });
-    console.error('Forgot password error:', err);
-    res.status(500).json({ error: 'Errore richiesta recupero password' });
-  }
-});
-
-router.post('/auth/reset-password', async (req, res) => {
-  try {
-    const token = String(req.body.token || '').trim();
-    const newPassword = String(req.body.new_password || '');
-    if (!token || !newPassword) {
-      return res.status(400).json({ error: 'Token e nuova password richiesti' });
-    }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password minimo 6 caratteri' });
-    }
-
-    const row = await getPasswordResetUserByToken(token);
-    if (!row) return res.status(400).json({ error: 'Link non valido o scaduto' });
-
-    await updateUser(row.user_id, { password: newPassword });
-    await markPasswordResetTokenUsed(token);
-    res.json({ success: true, message: 'Password aggiornata. Puoi accedere.' });
-  } catch (err) {
-    console.error('Reset password error:', err);
-    res.status(500).json({ error: err.message || 'Errore reimpostazione password' });
-  }
-});
+// Route pubbliche di autenticazione dashboard — estratte in auth-routes.js.
+router.use(require('./auth-routes'));
 
 // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Debug: Full push diagnostics ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
 router.get('/debug/push-diagnostics', requireDebugAccess, async (req, res) => {
@@ -1557,25 +1366,6 @@ function validateScopedUserBrand(role, brandId) {
   return null;
 }
 
-/** On restricted HR deploys, allowlisted operator emails are always platform admins (all brands + Utenti). */
-async function ensurePlatformAdminIfAllowlisted(user) {
-  const list = dashboardLoginAllowlist();
-  if (!list || !user) return user;
-  const email = String(user.email || '').trim().toLowerCase();
-  if (!list.includes(email)) return user;
-  if (normalizeRole(user.role) === 'admin' && user.brand_id == null) return user;
-  await updateUser(user.id, { role: 'admin', brand_id: null });
-  return { ...user, role: 'admin', brand_id: null };
-}
-
-function applyAllowlistOperatorContext(user) {
-  if (!user) return user;
-  const list = dashboardLoginAllowlist();
-  if (!list) return user;
-  const email = String(user.email || '').trim().toLowerCase();
-  if (!list.includes(email)) return user;
-  return { ...user, role: 'admin', brand_id: null };
-}
 
 /**
  * Routes registered *after* this middleware still include partner/public flows
