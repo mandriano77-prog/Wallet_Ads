@@ -52,9 +52,16 @@ router.post('/play/:serial_number', async (req, res) => {
       await lockClient.query('BEGIN');
       await lockClient.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`iw:${campaign_id}`]);
 
-      // Ricontrolla i contatori dentro il lock: i valori letti prima possono essere stantii.
-      const fresh = await getInstantWinCampaign(campaign_id);
-      const playCount = await countPlaysForUser(campaign_id, serial_number);
+      // Ricontrolla i contatori dentro il lock: i valori letti prima possono essere
+      // stantii. Tutte le query della sezione critica girano su lockClient — usare
+      // il pool qui può esaurirlo (N richieste in attesa del lock tengono una
+      // connessione a testa) e mettere in stallo il detentore del lock.
+      const fresh = await getInstantWinCampaign(campaign_id, lockClient);
+      if (!fresh || fresh.status !== 'active') {
+        await lockClient.query('ROLLBACK');
+        return res.status(404).json({ error: 'Campagna non trovata o non attiva' });
+      }
+      const playCount = await countPlaysForUser(campaign_id, serial_number, lockClient);
       if (fresh.max_plays_per_user && playCount >= fresh.max_plays_per_user) {
         await lockClient.query('ROLLBACK');
         return res.status(400).json({ error: 'Hai già giocato il massimo numero di volte', already_played: true });
@@ -77,7 +84,7 @@ router.post('/play/:serial_number', async (req, res) => {
         player_first_name: player_first_name || null,
         player_last_name: player_last_name || null,
         privacy_accepted: privacy_accepted || false
-      });
+      }, lockClient);
       await lockClient.query('COMMIT');
     } catch (playErr) {
       await lockClient.query('ROLLBACK').catch(() => {});
@@ -240,7 +247,7 @@ router.post('/game/:serial_number', async (req, res) => {
       await lockClient.query('BEGIN');
       await lockClient.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`gm:${campaign_id}`]);
 
-      const playCount = await countGamificationPlaysForUser(campaign_id, serial_number);
+      const playCount = await countGamificationPlaysForUser(campaign_id, serial_number, lockClient);
       if (campaign.max_plays_per_user && playCount >= campaign.max_plays_per_user) {
         await lockClient.query('ROLLBACK');
         return res.status(400).json({ error: 'Hai già giocato il massimo numero di volte', already_played: true });
@@ -259,7 +266,7 @@ router.post('/game/:serial_number', async (req, res) => {
         player_first_name: player_first_name || null,
         player_last_name: player_last_name || null,
         privacy_accepted: privacy_accepted || false
-      });
+      }, lockClient);
       await lockClient.query('COMMIT');
     } catch (playErr) {
       await lockClient.query('ROLLBACK').catch(() => {});

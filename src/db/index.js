@@ -120,7 +120,7 @@ function uuidv4() {
 // Le migrazioni inline usano .catch(logSchemaError): gli errori "già applicato"
 // (duplicate column/table/object, drop di oggetti assenti) sono attesi e silenziati,
 // tutto il resto va loggato — un ALTER fallito in silenzio riemerge come query rotta altrove.
-const EXPECTED_SCHEMA_CODES = new Set(['42701', '42P07', '42710', '42704']);
+const EXPECTED_SCHEMA_CODES = new Set(['42701', '42P07', '42710', '42704', '42703']);
 function logSchemaError(err) {
   if (!err || EXPECTED_SCHEMA_CODES.has(err.code)) return;
   console.warn('[schema] migration step failed:', err.code || '?', err.message);
@@ -2971,8 +2971,8 @@ async function createInstantWinCampaign(data) {
   return getInstantWinCampaign(id);
 }
 
-async function getInstantWinCampaign(id) {
-  const r = await pool.query('SELECT * FROM instant_win_campaigns WHERE id = $1', [id]);
+async function getInstantWinCampaign(id, db = pool) {
+  const r = await db.query('SELECT * FROM instant_win_campaigns WHERE id = $1', [id]);
   return r.rows[0] || null;
 }
 
@@ -3022,11 +3022,11 @@ async function deleteInstantWinCampaign(id) {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Instant Win Plays Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
-async function createInstantWinPlay(data) {
+async function createInstantWinPlay(data, db = pool) {
   const id = data.id || uuidv4();
   const { campaign_id, serial_number, brand_id, result, prize_name,
           player_email, player_phone, player_first_name, player_last_name, privacy_accepted } = data;
-  await pool.query(
+  await db.query(
     `INSERT INTO instant_win_plays (id, campaign_id, serial_number, brand_id, result, prize_name,
      player_email, player_phone, player_first_name, player_last_name, privacy_accepted, privacy_accepted_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
@@ -3036,7 +3036,7 @@ async function createInstantWinPlay(data) {
   );
   // Increment total_wins if result is 'win'
   if (result === 'win') {
-    await pool.query(
+    await db.query(
       'UPDATE instant_win_campaigns SET total_wins = total_wins + 1 WHERE id = $1', [campaign_id]);
   }
   return { id, campaign_id, serial_number, brand_id, result, prize_name,
@@ -3056,8 +3056,8 @@ async function listInstantWinPlays(campaignId, options = {}) {
   return r.rows;
 }
 
-async function countPlaysForUser(campaignId, serialNumber) {
-  const r = await pool.query(
+async function countPlaysForUser(campaignId, serialNumber, db = pool) {
+  const r = await db.query(
     'SELECT COUNT(*) as count FROM instant_win_plays WHERE campaign_id = $1 AND serial_number = $2',
     [campaignId, serialNumber]
   );
@@ -3164,11 +3164,11 @@ async function deleteGamificationCampaign(id) {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Gamification Plays Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
-async function createGamificationPlay(data) {
+async function createGamificationPlay(data, db = pool) {
   const id = data.id || uuidv4();
   const { campaign_id, serial_number, brand_id, completion_time_secs, tier, prize_name,
           score, player_email, player_phone, player_first_name, player_last_name, privacy_accepted } = data;
-  await pool.query(
+  await db.query(
     `INSERT INTO gamification_plays (id, campaign_id, serial_number, brand_id, completion_time_secs,
      tier, prize_name, score, player_email, player_phone, player_first_name, player_last_name,
      privacy_accepted, privacy_accepted_at)
@@ -3194,8 +3194,8 @@ async function listGamificationPlays(campaignId, options = {}) {
   return r.rows;
 }
 
-async function countGamificationPlaysForUser(campaignId, serialNumber) {
-  const r = await pool.query(
+async function countGamificationPlaysForUser(campaignId, serialNumber, db = pool) {
+  const r = await db.query(
     'SELECT COUNT(*) as count FROM gamification_plays WHERE campaign_id = $1 AND serial_number = $2',
     [campaignId, serialNumber]
   );
