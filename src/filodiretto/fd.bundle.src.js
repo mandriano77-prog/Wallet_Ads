@@ -10061,8 +10061,8 @@
   function buildPassPreviewRequestBody() {
     var linkUrl = (document.getElementById('pushPassLinkUrl')?.value || '').trim();
     var body = {
-      title: title,
-      message: message,
+      title: getPushTitleValue(),
+      message: getPushMessageValue(),
       update_pass: true,
       back_details: (document.getElementById('pushBackDetails')?.value || '').trim() || undefined,
       screen_alert: getPushScreenAlertValue() || undefined,
