@@ -9,8 +9,13 @@ const PUSH_MESSAGE_LINE_MAX = 22;
 const PUSH_MESSAGE_LINES = 3;
 /** Retro pass only — clausole/dettagli promo (non strip, non lock screen). */
 const PUSH_BACK_DETAILS_MAX = 500;
-/** Lock screen / Wallet notification body (changeMessage). */
-const PUSH_SCREEN_ALERT_MAX = 178;
+/**
+ * Lock screen / Wallet notification body (changeMessage) — solo la parte manuale.
+ * 110 = hook breve (best practice push) e garantisce che testo + " · " + didascalia
+ * header del template (max 64) restino entro il budget di visualizzazione validato
+ * su device (178: 110 + 3 + 64 = 177). Ridotto da 178 a luglio 2026 (proprietario).
+ */
+const PUSH_SCREEN_ALERT_MAX = 110;
 
 function validatePushScreenAlert(screenAlert) {
   const s = String(screenAlert ?? '').trim();

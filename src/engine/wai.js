@@ -732,7 +732,7 @@ function validateWaiResponse(raw, brandId, userPrompt) {
     // HR dispatch rejects Wallet updates without screen_alert — derive from copy when the model omits it.
     payload.screen_alert = String(
       payload.screen_alert || preview.details?.screen_alert || ''
-    ).trim().slice(0, 178) || `${payload.title}: ${payload.message}`.slice(0, 178);
+    ).trim().slice(0, require('./push-text-limits').PUSH_SCREEN_ALERT_MAX) || `${payload.title}: ${payload.message}`.slice(0, require('./push-text-limits').PUSH_SCREEN_ALERT_MAX);
     payload.back_details = normalizePushBackDetails(
       payload.back_details || preview.details?.back_details || preview.details?.details || ''
     );

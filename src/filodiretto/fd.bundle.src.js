@@ -9788,7 +9788,9 @@
   var TITLE_MAX = 22; // sync: src/engine/push-text-limits.js PUSH_TITLE_MAX
   var MESSAGE_MAX = 66; // sync: src/engine/push-text-limits.js PUSH_MESSAGE_MAX
   var BACK_DETAILS_MAX = 500; // sync: src/engine/push-text-limits.js PUSH_BACK_DETAILS_MAX
-  var SCREEN_ALERT_MAX = 178; // sync: src/engine/push-text-limits.js PUSH_SCREEN_ALERT_MAX
+  var SCREEN_ALERT_MAX = 110; // sync: src/engine/push-text-limits.js PUSH_SCREEN_ALERT_MAX
+  // Budget di visualizzazione lock screen validato su device: testo + separatore + didascalia.
+  var SCREEN_ALERT_DISPLAY_BUDGET = 178;
   var DEFAULT_PUSH_TITLE = '';
   var DEFAULT_PUSH_MESSAGE = '';
   var TEST_PASS_KEY = 'fd:pushTestPassId';
@@ -9935,14 +9937,13 @@
     if (caption) {
       html += '<span style="color:var(--text2);"> \u00b7 ' + esc(caption) + '</span>\u201d ' +
         '<span style="color:var(--text2);font-style:italic;">(la parte dopo \u00b7 \u00e8 la didascalia del template, aggiunta automatica)</span>';
-      // Il limite 178 (validato su device) protegge solo la parte manuale: la coda
-      // si somma oltre. iOS tronca dalla fine, quindi con testi lunghi la didascalia
-      // pu\u00f2 sparire dal banner — avvisa quando il totale sfora il budget.
+      // Con limite manuale 110 e didascalia max 64 il totale (max 177) resta nel
+      // budget display (178); il warning \u00e8 una rete di sicurezza se i limiti cambiano.
       var total = manual.length + 3 + caption.length;
-      if (total > SCREEN_ALERT_MAX) {
+      if (total > SCREEN_ALERT_DISPLAY_BUDGET) {
         html += '<br><span style="color:var(--fd-color-warning-text, #a16207);">\u26a0 Testo + didascalia = ' + total +
-          ' caratteri: oltre ' + SCREEN_ALERT_MAX + ' iOS pu\u00f2 troncare la parte finale sul lock screen. ' +
-          'Consigliato max ' + Math.max(0, SCREEN_ALERT_MAX - 3 - caption.length) + ' caratteri di testo.</span>';
+          ' caratteri: oltre ' + SCREEN_ALERT_DISPLAY_BUDGET + ' iOS pu\u00f2 troncare la parte finale sul lock screen. ' +
+          'Consigliato max ' + Math.max(0, SCREEN_ALERT_DISPLAY_BUDGET - 3 - caption.length) + ' caratteri di testo.</span>';
       }
     } else {
       html += '\u201d';

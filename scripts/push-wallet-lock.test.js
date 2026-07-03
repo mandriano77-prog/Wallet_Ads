@@ -176,9 +176,9 @@ test('LOCK: relevantDate escluso dai pass HR', () => {
 
 // ── 3. screen_alert obbligatorio e limiti testo ──
 
-test('LOCK: screen_alert obbligatorio con max 178 caratteri', () => {
+test('LOCK: screen_alert obbligatorio con max 110 caratteri (ridotto da 178, luglio 2026)', () => {
   const { validatePushScreenAlert, PUSH_SCREEN_ALERT_MAX } = require('../src/engine/push-text-limits');
-  assert.equal(PUSH_SCREEN_ALERT_MAX, 178);
+  assert.equal(PUSH_SCREEN_ALERT_MAX, 110);
   assert.equal(validatePushScreenAlert('').length, 1);
   assert.equal(validatePushScreenAlert('x'.repeat(179)).length, 1);
   assert.equal(validatePushScreenAlert('SALDI ESTIVI: -50%').length, 0);
@@ -214,7 +214,7 @@ test('LOCK: push_log persiste screen_alert e il reinvio ha il fallback', () => {
   assert.match(read('src/engine/push-dispatch.js'), /logPush\(\{[\s\S]{0,200}screen_alert: screenTextInput/);
   const dashboard = read('src/dashboard/index.html');
   assert.match(dashboard, /resendPushFromHistory[\s\S]{0,900}log\.screen_alert/);
-  assert.match(dashboard, /resendPushFromHistory[\s\S]{0,1200}screen_alert: screenAlert\.slice\(0, 178\)/);
+  assert.match(dashboard, /resendPushFromHistory[\s\S]{0,1200}screen_alert: screenAlert\.slice\(0, 110\)/);
 });
 
 // ── 5. W.AI deriva screen_alert (mai push bloccate dall'assistente) ──

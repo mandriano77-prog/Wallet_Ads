@@ -252,7 +252,7 @@ async function executeWalletPush(body, ctx = {}) {
         title: effectiveTitle,
         message: effectiveMessage,
         ts: Date.now(),
-        ...(screenText ? { screen_alert: screenText.slice(0, 178) } : {}),
+        ...(screenText ? { screen_alert: screenText.slice(0, require('./push-text-limits').PUSH_SCREEN_ALERT_MAX) } : {}),
       },
       back_details
     );

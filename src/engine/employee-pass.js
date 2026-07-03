@@ -6,7 +6,7 @@
 /** Canonical pass type in DB / API / UI for HR employee passes. */
 const EMPLOYEE_PASS_TYPE = 'employee_pass';
 const APPLE_WALLET_UPDATE_HINT = "Apri l'aggiornamento";
-const { PUSH_TITLE_MAX, PUSH_MESSAGE_MAX } = require('./push-text-limits');
+const { PUSH_TITLE_MAX, PUSH_MESSAGE_MAX, PUSH_SCREEN_ALERT_MAX } = require('./push-text-limits');
 /** Apple Wallet pass.json top-level key (implementation detail only). */
 const APPLE_EMPLOYEE_PASS_STRUCTURE = 'storeCard';
 /** Apple Wallet back link titles (title = embedded CTA, no duplicate subtitle). */
@@ -167,7 +167,6 @@ function isDefaultPushCopy(pushAnn) {
   return title === 'INFO PASS' && message === 'apri il pass per i dettagli';
 }
 
-const PUSH_SCREEN_ALERT_MAX = 178;
 
 function buildPushAlertText(pushAnn) {
   const screen = String(pushAnn?.screen_alert || pushAnn?.screenAlert || '').trim();

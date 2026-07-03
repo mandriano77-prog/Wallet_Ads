@@ -23,7 +23,7 @@ function parsePushAnnouncementRecord(raw) {
     message,
     ts: Number.isFinite(ts) ? ts : Date.now(),
   };
-  if (screen) out.screen_alert = screen.slice(0, 178);
+  if (screen) out.screen_alert = screen.slice(0, require('./push-text-limits').PUSH_SCREEN_ALERT_MAX);
   if (backRaw) out.back_details = backRaw.slice(0, 500);
   return out;
 }

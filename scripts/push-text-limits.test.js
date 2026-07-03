@@ -49,7 +49,7 @@ test('agent rules mention limits', () => {
 
 test('validatePushScreenAlert requires text and enforces max length', () => {
   const { validatePushScreenAlert, PUSH_SCREEN_ALERT_MAX } = require('../src/engine/push-text-limits');
-  assert.equal(PUSH_SCREEN_ALERT_MAX, 178);
+  assert.equal(PUSH_SCREEN_ALERT_MAX, 110);
   const empty = validatePushScreenAlert('');
   assert.equal(empty.length, 1);
   assert.equal(empty[0].field, 'pushScreenAlert');

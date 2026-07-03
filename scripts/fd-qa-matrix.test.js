@@ -157,8 +157,8 @@ test('fd.bundle.css preserves calc() operator spacing (W.AI inset)', () => {
 
 test('index.html bundle cache references wide-layout tag', () => {
   const html = read('src/dashboard/index.html');
-  assert.match(html, /fd\.bundle\.css\?v=20260703-alert-budget/);
-  assert.match(html, /fd\.bundle\.js\?v=20260703-alert-budget/);
+  assert.match(html, /fd\.bundle\.css\?v=20260704-hook-110/);
+  assert.match(html, /fd\.bundle\.js\?v=20260704-hook-110/);
   assert.match(html, /\/dashboard\/lib\/public-url\.js/);
   assert.match(html, /function a2wPublicUrlBase/);
   assert.match(html, /#a2wMediaTabs\{display:none!important\}/);
@@ -705,7 +705,7 @@ test('Push immediate exposes screen alert, strip image and back copy fields', ()
   assert.match(dashboard, /id="pushTitle" maxlength="22"/);
   assert.match(dashboard, /id="pushMessage"/);
   assert.match(dashboard, /fd-push-copy-block" style="margin-top:16px;display:none;"/);
-  assert.match(fdPush, /SCREEN_ALERT_MAX = 178/);
+  assert.match(fdPush, /SCREEN_ALERT_MAX = 110/);
   assert.match(fdPush, /function getPushScreenAlertValue/);
   assert.match(fdPush, /function getPushTitleValue/);
   assert.match(fdPush, /function getPushMessageValue/);

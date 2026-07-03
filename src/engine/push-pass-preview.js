@@ -33,7 +33,7 @@ function buildPreviewAnnouncement(body) {
   if (!message && !screen) return null;
   const base = normalizePushAnnouncementForStrip({ title, message, ts: Date.now() })
     || { title, message, ts: Date.now() };
-  if (screen) base.screen_alert = screen.slice(0, 178);
+  if (screen) base.screen_alert = screen.slice(0, require('./push-text-limits').PUSH_SCREEN_ALERT_MAX);
   return attachBackDetailsToAnnouncement(base, body.back_details);
 }
 
