@@ -205,7 +205,8 @@
         if (typeof window.invalidateBrandCache === 'function') window.invalidateBrandCache();
         if (typeof window.loadTemplates === 'function') window.loadTemplates();
       } catch (err) {
-        if (typeof window.alert === 'function') window.alert('Errore: ' + err.message);
+        if (typeof toast === 'function') toast('Errore: ' + err.message);
+        else if (typeof window.alert === 'function') window.alert('Errore: ' + err.message);
       }
     }
 

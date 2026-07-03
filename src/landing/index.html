@@ -120,6 +120,15 @@
     .cta[disabled] { opacity: 0.6; cursor: default; }
     .cta-icon { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; }
     .cta-icon svg { width: 26px; height: 26px; display: block; }
+    .cta { position: relative; }
+    .cta-recommended-badge {
+      position: absolute; top: -10px; right: 14px;
+      background: #16A34A; color: #fff;
+      font-size: 11px; font-weight: 700; letter-spacing: .02em;
+      padding: 3px 10px; border-radius: 999px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    }
+    .cta--recommended { outline: 2px solid #16A34A; outline-offset: 2px; }
     .cta-wallet--apple {
       background: #000;
       color: #fff;
@@ -279,13 +288,13 @@
 
     <!-- 3. Wallet CTAs (Apple / Google / Samsung) -->
     <div class="cta-section">
-      <button type="button" class="cta cta-wallet--apple" id="installBtn">
+      <button type="button" class="cta cta-wallet--apple" id="installBtn"><span class="cta-recommended-badge" id="appleBadge" hidden>Per il tuo iPhone</span>
         <span class="cta-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         </span>
         <span class="cta-label" id="btnLabel">Aggiungi ad Apple</span>
       </button>
-      <a href="#" id="googleBtn" class="cta cta-wallet--google" style="display:none;" onclick="addToGoogleWallet(event)">
+      <a href="#" id="googleBtn" class="cta cta-wallet--google" style="display:none;" onclick="addToGoogleWallet(event)"><span class="cta-recommended-badge" id="googleBadge" hidden>Per il tuo telefono</span>
         <span class="cta-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -468,14 +477,26 @@
         if (samsungBtn) samsungBtn.style.display = 'none';
 
         /* Mobile-first policy: mobile first, but keep desktop CTAs visible to avoid "empty page". */
+        var appleBadge = document.getElementById('appleBadge');
+        var googleBadge = document.getElementById('googleBadge');
+        if (appleBadge) appleBadge.hidden = true;
+        if (googleBadge) googleBadge.hidden = true;
+        appleBtn.classList.remove('cta--recommended');
+        if (googleBtn) googleBtn.classList.remove('cta--recommended');
         if (isIOS) {
           appleBtn.style.display = 'flex';
+          appleBtn.classList.add('cta--recommended');
+          if (appleBadge) appleBadge.hidden = false;
           if (el.deviceNote) el.deviceNote.textContent = 'Consigliato: apri da iPhone per installazione diretta Apple Wallet.';
           return;
         }
         if (isAndroid) {
           appleBtn.style.display = 'none';
-          if (w.google && googleBtn) googleBtn.style.display = 'flex';
+          if (w.google && googleBtn) {
+            googleBtn.style.display = 'flex';
+            googleBtn.classList.add('cta--recommended');
+            if (googleBadge) googleBadge.hidden = false;
+          }
           if (w.samsung && samsungBtn) samsungBtn.style.display = 'flex';
           if (!w.google && !w.samsung) appleBtn.style.display = 'none';
           if (el.deviceNote) el.deviceNote.textContent = 'Consigliato: Android con Google/Samsung Wallet installato.';

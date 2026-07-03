@@ -783,7 +783,7 @@
     if (!screenAlert) {
       if (typeof window.setPushFieldError === 'function') {
         window.setPushFieldError('pushScreenAlert', 'Inserisci il testo della notifica Wallet (lock screen)');
-      } else if (typeof alert === 'function') alert('Compila la notifica lock screen');
+      } else if (typeof toast === 'function') toast('Compila la notifica lock screen');
       return;
     }
     if (screenAlert.length > SCREEN_ALERT_MAX) {
@@ -796,8 +796,8 @@
     if (backDetails.length > BACK_DETAILS_MAX) {
       if (typeof window.setPushFieldError === 'function') {
         window.setPushFieldError('pushBackDetails', 'Dettagli retro max ' + BACK_DETAILS_MAX + ' caratteri');
-      } else if (typeof alert === 'function') {
-        alert('Dettagli retro max ' + BACK_DETAILS_MAX + ' caratteri');
+      } else if (typeof toast === 'function') {
+        toast('Dettagli retro max ' + BACK_DETAILS_MAX + ' caratteri');
       }
       return;
     }
@@ -826,7 +826,7 @@
         if (banner) {
           banner.textContent = errMsg;
           banner.hidden = false;
-        } else if (typeof alert === 'function') alert('Errore: ' + errMsg);
+        } else if (typeof toast === 'function') toast('Errore: ' + errMsg);
         return;
       }
       localStorage.setItem(TEST_PASS_KEY, passId);
@@ -835,7 +835,7 @@
           ? buildPushDeliveryMessage(data)
           : 'Push di prova inviata';
       if (typeof toast === 'function') toast(msg);
-      else if (typeof alert === 'function') alert(msg);
+      else if (typeof toast === 'function') toast(msg);
     } catch (e) {
       var failMsg = (e && e.name === 'AbortError')
         ? 'Invio non riuscito, riprova'
@@ -844,7 +844,7 @@
       if (failBanner) {
         failBanner.textContent = failMsg;
         failBanner.hidden = false;
-      } else if (typeof alert === 'function') alert('Errore: ' + failMsg);
+      } else if (typeof toast === 'function') toast('Errore: ' + failMsg);
     } finally {
       clearTimeout(timeoutId);
       if (btn) {

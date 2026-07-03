@@ -100,7 +100,7 @@ test('brand identity non mostra sezione asset inline (solo Media Library)', () =
   assert.doesNotMatch(indexHtml, /id="a2wBiOpenMediaLibraryBtn"/);
   assert.match(indexHtml, /function isBrandIdentityAssetUiExcluded/);
   assert.match(indexHtml, /function a2wBiRemoveLegacyAssetUi/);
-  assert.match(indexHtml, /Le immagini del brand si gestiscono in Media Library/);
+  assert.match(indexHtml, /Le immagini del brand si gestiscono in Immagini e loghi/);
   assert.match(biCss, /#brand-identity \.a2w-bi-section:has\(#a2wBiAssetsGrid\)/);
   assert.match(biCss, /preview-column/);
 });

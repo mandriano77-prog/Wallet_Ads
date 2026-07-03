@@ -1,6 +1,6 @@
 const { HR_PRIVACY_POLICY_VERSION } = require('./hr-privacy-policy');
 const PRIVACY_POLICY_VERSION = HR_PRIVACY_POLICY_VERSION;
-const { signActivationToken, verifyActivationToken } = require('./activation-auth');
+const { signActivationToken, verifyActivationToken, decodeActivationTokenLoose } = require('./activation-auth');
 const { resolveBaseUrlFromEnv } = require('./base-url');
 const {
   sendActivationEmail,
@@ -102,6 +102,25 @@ async function getMemberForActivationToken(db, token) {
     return null;
   }
   return member;
+}
+
+/**
+ * Per link scaduti o sostituiti: risale al brand (firma verificata, scadenza
+ * ignorata) così la pagina di errore può offrire "Richiedi un nuovo link"
+ * verso /join/{slug}. Espone solo slug e nome brand, già pubblici.
+ */
+async function getActivationJoinContext(db, token) {
+  const loose = decodeActivationTokenLoose(token);
+  if (!loose) return null;
+  const r = await db.pool.query(
+    `SELECT b.slug AS brand_slug, b.name AS brand_name
+     FROM members m JOIN brands b ON b.id = m.brand_id
+     WHERE m.id = $1 LIMIT 1`,
+    [loose.memberId]
+  );
+  const row = r.rows[0];
+  if (!row || !row.brand_slug) return null;
+  return { brand_slug: row.brand_slug, brand_name: row.brand_name || null };
 }
 
 async function findBrandForPublicJoin(db, slugOrQr) {
@@ -442,6 +461,7 @@ module.exports = {
   publicBrandLogoUrl,
   issueMemberActivation,
   getMemberForActivationToken,
+  getActivationJoinContext,
   findBrandForPublicJoin,
   confirmMemberActivation,
   distributeActivationEmails,

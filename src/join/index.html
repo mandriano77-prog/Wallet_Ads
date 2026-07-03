@@ -93,7 +93,7 @@
     <img class="brand-mark" id="brandLogo" alt="">
     <div class="badge">Filodiretto</div>
     <h1 id="title">Attiva il tuo pass</h1>
-    <p id="subtitle">Inserisci la tua email aziendale. Ti invieremo un link per attivare il pass dipendente.</p>
+    <p id="subtitle">Inserisci la tua email aziendale: riceverai subito un link per attivare il pass dipendente sul tuo telefono.</p>
     <form id="form">
       <label for="email">Email aziendale</label>
       <input type="email" id="email" name="email" required autocomplete="email" placeholder="nome.cognome@azienda.it">
@@ -161,11 +161,11 @@
         const data = await res.json();
         if (data.ok) {
           msg.className = 'msg ok';
-          msg.textContent = data.message || 'Controlla la tua casella email.';
+          msg.textContent = 'Link inviato a ' + email + '. Controlla la posta nei prossimi minuti — se non lo vedi, guarda anche nella cartella Spam.';
           document.getElementById('form').style.display = 'none';
         } else {
           msg.className = 'msg err';
-          msg.textContent = data.message || data.error || 'Richiesta non riuscita.';
+          msg.textContent = data.message || data.error || 'Richiesta non riuscita. Verifica di aver usato la tua email aziendale; se il problema persiste contatta il tuo referente HR.';
         }
       } catch (err) {
         msg.className = 'msg err';

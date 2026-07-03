@@ -15,7 +15,7 @@
     --text-primary: #0F172A;
     --text-body: #334155;
     --text-secondary: #64748B;
-    --text-muted: #94A3B8;
+    --text-muted: #64748B;
     --text-on-accent: #FFFFFF;
 
     /* Accent */
@@ -771,6 +771,8 @@
     .main { padding: var(--space-5) var(--space-4); padding-bottom: 90px; }
     .data-grid { grid-template-columns: 1fr; }
     .user-name { display: none; }
+    /* Leggibilità su smartphone per un pubblico non giovane. */
+    :root { --text-xs: 13px; --text-sm: 15px; }
   }
 
   .hidden { display: none !important; }

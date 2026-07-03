@@ -1,11 +1,11 @@
 {
-  "builtAt": "2026-07-03T06:11:24.904Z",
+  "builtAt": "2026-07-03T08:01:51.669Z",
   "minifier": "esbuild 0.28.1",
   "cssFiles": 38,
   "jsFiles": 38,
   "cssBytes": 213753,
-  "jsBytes": 378883,
-  "jsMapBytes": 949810,
+  "jsBytes": 378929,
+  "jsMapBytes": 949915,
   "requestsBefore": 76,
   "requestsAfter": 2
 }

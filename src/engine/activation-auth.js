@@ -25,8 +25,25 @@ function verifyActivationToken(token) {
   return { memberId: payload.mid };
 }
 
+/**
+ * Verifica la firma IGNORANDO la scadenza: serve solo a risalire al brand di un
+ * link scaduto/sostituito per offrire il percorso "richiedi un nuovo link".
+ */
+function decodeActivationTokenLoose(token) {
+  const secret = activationSecret();
+  if (!secret) return null;
+  try {
+    const payload = jwt.verify(token, secret, { ignoreExpiration: true });
+    if (payload.typ !== ACTIVATION_TYP || !payload.mid) return null;
+    return { memberId: payload.mid };
+  } catch {
+    return null;
+  }
+}
+
 module.exports = {
   signActivationToken,
   verifyActivationToken,
+  decodeActivationTokenLoose,
   ACTIVATION_TYP
 };

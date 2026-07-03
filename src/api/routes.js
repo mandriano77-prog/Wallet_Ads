@@ -1080,6 +1080,7 @@ const {
   findBrandForPublicJoin,
   publicJoinByEmail,
   getMemberForActivationToken,
+  getActivationJoinContext,
   confirmMemberActivation,
   distributeActivationEmails,
   resendMemberActivationEmail,
@@ -1158,7 +1159,19 @@ router.get('/activate/:token', async (req, res) => {
     activationApiCacheHeaders(res);
     const token = extractActivationTokenFromRequest(req);
     const member = await getMemberForActivationToken(hrActivationDb(), token);
-    if (!member) return res.status(404).json({ error: 'Link non valido o scaduto' });
+    if (!member) {
+      // Link scaduto o sostituito da un reinvio: offri il percorso self-service
+      // per richiederne uno nuovo invece del vicolo cieco.
+      const joinCtx = await getActivationJoinContext(hrActivationDb(), token).catch(() => null);
+      if (joinCtx) {
+        return res.status(410).json({
+          error: 'Questo link di attivazione è scaduto o è stato sostituito da uno più recente.',
+          join_url: `/join/${encodeURIComponent(joinCtx.brand_slug)}`,
+          brand_name: joinCtx.brand_name
+        });
+      }
+      return res.status(404).json({ error: 'Link non valido o scaduto' });
+    }
     const templates = await listTemplates(member.brand_id);
     const hrTemplates = templates.filter((t) => t.pass_type === 'employee_pass');
     res.json({

@@ -25,8 +25,8 @@
             var fdLegacyMediaHide = document.createElement('style');
             fdLegacyMediaHide.textContent = "html[data-app='filodiretto'] #media-library #a2wMediaTabs{display:none!important}";
             document.head.appendChild(fdLegacyMediaHide);
-            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260705-poi-sched';
-            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260705-poi-sched';
+            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260706-ux-tier1';
+            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260706-ux-tier1';
             var fdCss = ['/filodiretto/tokens.css', '/filodiretto/fd-theme.css', '/filodiretto/fd-typography.css', '/filodiretto/fd-buttons.css', '/filodiretto/fd-components.css', '/filodiretto/fd-header.css', '/filodiretto/fd-layout.css', '/filodiretto/fd-wide-layout.css', '/filodiretto/fd-mobile-gate.css', '/filodiretto/fd-wai.css', '/filodiretto/fd-brand-switcher.css', '/filodiretto/fd-nav.css', '/filodiretto/fd-brand-identity.css', '/filodiretto/fd-brand-scope.css', '/filodiretto/fd-home.css', '/filodiretto/fd-users.css', '/filodiretto/fd-contacts.css', '/filodiretto/fd-media-library.css', '/filodiretto/fd-destructive.css', '/filodiretto/fd-form-dirty.css', '/filodiretto/fd-form-help.css', '/filodiretto/fd-empty-states.css', '/filodiretto/fd-page-states.css', '/filodiretto/fd-danger-zone.css', '/filodiretto/fd-push.css', '/filodiretto/fd-reward-challenge.css', '/filodiretto/fd-analytics.css', '/filodiretto/fd-audiences.css', '/filodiretto/fd-conventions.css', '/filodiretto/fd-pga.css', '/filodiretto/fd-activity-log.css', '/filodiretto/fd-responsive-tables.css'];
             var fdJs = ['/filodiretto/fd-buttons.js', '/filodiretto/fd-header.js', '/filodiretto/fd-layout.js', '/filodiretto/fd-mobile-gate.js', '/filodiretto/fd-wai.js', '/filodiretto/fd-brand-switcher.js', '/filodiretto/fd-icons.js', '/filodiretto/fd-nav.js', '/filodiretto/fd-legacy-campaigns.js', '/filodiretto/fd-hr-copy.js', '/filodiretto/fd-brand-scope.js', '/filodiretto/fd-brand-identity.js', '/filodiretto/fd-brand-pass-flow.js', '/filodiretto/fd-home.js', '/filodiretto/fd-users.js', '/filodiretto/fd-contacts.js', '/filodiretto/fd-media-library.js', '/filodiretto/fd-templates.js', '/filodiretto/fd-passes.js', '/filodiretto/fd-destructive.js', '/filodiretto/fd-form-dirty.js', '/filodiretto/fd-form-help.js', '/filodiretto/fd-form-a11y.js', '/filodiretto/fd-empty-states.js', '/filodiretto/fd-page-states.js', '/filodiretto/fd-danger-zone.js', '/filodiretto/fd-rbac.js', '/filodiretto/fd-push.js', '/filodiretto/fd-reward-challenge.js', '/filodiretto/fd-analytics.js', '/filodiretto/fd-audiences.js', '/filodiretto/fd-conventions.js', '/filodiretto/fd-pga.js', '/filodiretto/fd-pga-engagement.js', '/filodiretto/fd-activity-log.js', '/filodiretto/fd-responsive-tables.js', '/filodiretto/fd-profile.js'];
             var useFdBundle = window.location.search.indexOf('fd_nobundle') === -1;
@@ -1507,7 +1507,7 @@
                 <summary class="nav-group-label">Brand &amp; Pass</summary>
                 <div class="nav-group-items">
                     <div class="nav-item" onclick="nav('brand-identity')" data-section-id="brand-identity" data-requires-perm="brand_identity" role="button" tabindex="0">Identità Brand</div>
-                    <div class="nav-item" onclick="nav('media-library')" data-section-id="media-library" data-requires-perm="media_library" role="button" tabindex="0">Media Library</div>
+                    <div class="nav-item" onclick="nav('media-library')" data-section-id="media-library" data-requires-perm="media_library" role="button" tabindex="0">Immagini e loghi</div>
                     <div class="nav-item" onclick="nav('templates')" data-section-id="templates" data-requires-perm="templates" role="button" tabindex="0">Template Pass</div>
                     <div class="nav-item" onclick="nav('passes')" data-section-id="passes" data-requires-perm="passes" role="button" tabindex="0">Pass Emessi</div>
                     <div class="nav-item" onclick="nav('leads')" data-section-id="leads" data-requires-perm="employees" data-menu-key="nav_leads" data-menu-default="Contatti" role="button" tabindex="0">Contatti <span id="navNoMatricolaBadge" class="nav-badge" style="display:none;" title="Dipendenti senza matricola"></span></div>
@@ -1638,7 +1638,7 @@
                 <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Logo, strip image e stile visivo del pass Apple Wallet.</p>
                 <div class="card">
                     <div class="sec-title" style="font-size:16px;">Immagini Pass</div>
-                    <p style="font-size:11px;color:var(--text2);margin-bottom:12px;">Carica da file o scegli dalla <strong>Media Library</strong> (immagini già ritagliate).</p>
+                    <p style="font-size:11px;color:var(--text2);margin-bottom:12px;">Carica da file o scegli dalle <strong>Immagini e loghi</strong> salvate (già ritagliate).</p>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Logo Pass (PNG, max 320x100)</label>
@@ -1647,7 +1647,7 @@
                                 <span id="bsLogoPlaceholder" style="font-size:12px;color:var(--text2);">Nessun logo</span>
                             </div>
                             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                <button type="button" class="btn small" onclick="pickMediaForPassDesign('logo')">Da Media Library</button>
+                                <button type="button" class="btn small" onclick="pickMediaForPassDesign('logo')">Da Immagini e loghi</button>
                                 <button type="button" class="btn small sec" onclick="document.getElementById('bsLogoFile').click()">Upload file</button>
                             </div>
                             <input type="file" id="bsLogoFile" accept="image/*,.pdf" style="display:none;" onchange="onPassDesignFile(this,'logo')">
@@ -1659,7 +1659,7 @@
                                 <span id="bsStripPlaceholder" style="font-size:12px;color:var(--text2);">Nessuna strip</span>
                             </div>
                             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                <button type="button" class="btn small" onclick="pickMediaForPassDesign('strip')">Da Media Library</button>
+                                <button type="button" class="btn small" onclick="pickMediaForPassDesign('strip')">Da Immagini e loghi</button>
                                 <button type="button" class="btn small sec" onclick="document.getElementById('bsStripFile').click()">Upload file</button>
                             </div>
                             <input type="file" id="bsStripFile" accept="image/*,.pdf" style="display:none;" onchange="onPassDesignFile(this,'strip')">
@@ -1773,7 +1773,7 @@
                                 <span class="dropzone__placeholder">Trascina o clicca per scegliere una strip temporanea</span>
                             </div>
                             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                <button type="button" class="btn small" onclick="pushPickStripFromMedia()">Scegli da Media Library</button>
+                                <button type="button" class="btn small" onclick="pushPickStripFromMedia()">Scegli da Immagini e loghi</button>
                                 <button type="button" class="btn small danger" id="pushStripClearBtn" onclick="pushClearStrip()" style="display:none;">Rimuovi strip</button>
                             </div>
                         </div>
@@ -1873,7 +1873,7 @@
                                 <span class="dropzone__placeholder">Trascina o clicca per scegliere una strip temporanea</span>
                             </div>
                             <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-                                <button type="button" class="btn small" onclick="schedPickStripFromMedia()">Scegli da Media Library</button>
+                                <button type="button" class="btn small" onclick="schedPickStripFromMedia()">Scegli da Immagini e loghi</button>
                                 <button type="button" class="btn small danger" id="schedStripClearBtn" onclick="schedClearStrip()" style="display:none;">Rimuovi strip</button>
                             </div>
                         </div>
@@ -1999,7 +1999,7 @@
                     <header class="a2w-bi-header">
                         <div class="a2w-bi-header__copy">
                             <h1 class="sec-title page-title a2w-bi-title">Identità Brand</h1>
-                            <p class="a2w-bi-subtitle">Definisci nome, contatti e dati pubblici. Le immagini del brand si gestiscono in Media Library.</p>
+                            <p class="a2w-bi-subtitle">Definisci nome, contatti e dati pubblici. Le immagini del brand si gestiscono in Immagini e loghi.</p>
                         </div>
                         <div class="a2w-bi-header__actions">
                             <span id="a2wBiSaveStateBadge" class="a2w-bi-state-badge" aria-live="polite">Salvato</span>
@@ -2183,7 +2183,7 @@
             <div id="media-library" class="section" data-rbac-section="media-library">
                 <div class="a2w-media-page">
                     <div class="a2w-media-page-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                        <h1 class="sec-title page-title" style="margin-bottom:0">Media Library</h1>
+                        <h1 class="sec-title page-title" style="margin-bottom:0">Immagini e loghi</h1>
                         <div style="display:flex;gap:8px;">
                             <button class="btn" data-requires-write="media-library" onclick="openMediaUpload()">+ Carica Immagine</button>
                             <button class="btn sec fd-rbac-write" data-requires-write="media-library" style="color:#f66;border-color:#f66;" onclick="deleteAllMedia()">Svuota tutto</button>
@@ -2423,13 +2423,13 @@
                 <div id="wzStep2" class="wz-step">
                     <div class="card" style="margin-bottom:16px;">
                         <div class="sec-title" style="font-size:16px;">Logo Pass</div>
-                        <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">Logo in alto a sinistra sul pass (PNG, max 320×100). Usa la Media Library dopo il ritaglio.</p>
+                        <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">Logo in alto a sinistra sul pass (PNG, max 320×100). Usa Immagini e loghi dopo il ritaglio.</p>
                         <div id="wzLogoPreviewBox" style="min-height:48px;margin-bottom:12px;display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);">
                             <img id="wzLogoPreview" alt="Logo" style="display:none;max-height:44px;max-width:200px;object-fit:contain;">
                             <span id="wzLogoPlaceholder" style="color:var(--text2);font-size:12px;">Nessun logo selezionato</span>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <button type="button" class="btn small" onclick="wzPickFromMedia('logo')">Scegli da Media Library</button>
+                            <button type="button" class="btn small" onclick="wzPickFromMedia('logo')">Scegli da Immagini e loghi</button>
                             <button type="button" class="btn small sec" onclick="wzUploadLogo()">Upload file</button>
                             <button type="button" class="btn small danger" onclick="wzRemoveLogo()" id="wzLogoDeleteBtn" style="display:none;">Rimuovi</button>
                         </div>
@@ -2437,12 +2437,12 @@
                     </div>
                     <div class="card">
                         <div class="sec-title" style="font-size:16px;">Strip Image</div>
-                        <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">Immagine principale del pass (750×246). Scegli dalla Media Library dopo il ritaglio.</p>
+                        <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">Immagine principale del pass (750×246). Scegli da Immagini e loghi dopo il ritaglio.</p>
                         <div id="wzStripPreview" style="width:100%;max-width:500px;aspect-ratio:750/246;background:var(--bg3);border-radius:8px;border:1px solid var(--border);overflow:hidden;margin-bottom:12px;display:flex;align-items:center;justify-content:center;">
                             <span style="color:var(--text2);font-size:12px;">Nessuna strip selezionata</span>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <button type="button" class="btn small" onclick="wzPickFromMedia('strip')">Scegli da Media Library</button>
+                            <button type="button" class="btn small" onclick="wzPickFromMedia('strip')">Scegli da Immagini e loghi</button>
                             <button type="button" class="btn small sec" onclick="wzUploadStrip()">Upload file</button>
                             <button type="button" class="btn small danger" onclick="wzRemoveStrip()" id="wzStripDeleteBtn" style="display:none;">Rimuovi</button>
                         </div>
@@ -4621,7 +4621,7 @@ const SECTION_PAGE_TITLES = (typeof window !== 'undefined' && window.FD_NAV && w
     : {
         welcome: 'Inizio',
         'brand-identity': 'Identità Brand',
-        'media-library': 'Media Library',
+        'media-library': 'Immagini e loghi',
         templates: 'Template Pass',
         passes: 'Pass Emessi',
         push: 'Push & Notifiche',
@@ -5832,7 +5832,7 @@ async function saveCampaign(openStripUpload = false) {
         start_date: document.getElementById('campStart').value || null,
         end_date: document.getElementById('campEnd').value || null
     };
-    if (!body.name) return alert('Nome campagna obbligatorio');
+    if (!body.name) return toast('Nome campagna obbligatorio');
     const url = editId ? `${API}/campaigns/${editId}` : `${API}/campaigns`;
     const method = editId ? 'PUT' : 'POST';
     try {
@@ -8388,7 +8388,7 @@ async function createScheduledPush() {
     const schedType = document.getElementById('schedType').value;
     const time = document.getElementById('schedTime').value || '09:00';
 
-    if (!brandId) return alert('Seleziona un brand');
+    if (!brandId) return toast('Seleziona un brand');
     const schedScreenAlert = getScheduledPushScreenAlert();
     if (!schedScreenAlert) {
         setPushFieldError('schedScreenAlert', 'Inserisci il testo della notifica Wallet (lock screen)');
@@ -8408,15 +8408,15 @@ async function createScheduledPush() {
     else if (campaignId && isLegacyCampaignsUiEnabled()) body.campaign_id = campaignId;
     if (schedType === 'once') {
         body.date = document.getElementById('schedDate').value;
-        if (!body.date) return alert('Seleziona una data');
+        if (!body.date) return toast('Seleziona una data');
     }
     if (schedType === 'weekly') {
         body.days = [...document.querySelectorAll('.sched-day:checked')].map(cb => parseInt(cb.value));
-        if (!body.days.length) return alert('Seleziona almeno un giorno');
+        if (!body.days.length) return toast('Seleziona almeno un giorno');
     }
     const backDetails = (document.getElementById('schedBackDetails')?.value || '').trim();
     if (backDetails.length > PUSH_BACK_DETAILS_MAX) {
-        return alert(`Dettagli retro max ${PUSH_BACK_DETAILS_MAX} caratteri`);
+        return toast(`Dettagli retro max ${PUSH_BACK_DETAILS_MAX} caratteri`);
     }
     if (backDetails) body.back_details = backDetails;
     const passLinkUrl = (document.getElementById('schedPassLinkUrl')?.value || '').trim();
@@ -8517,7 +8517,7 @@ function getGeoMaxDistanceValue() {
 }
 
 function addGeoLocation() {
-    if (geoLocations.length >= GEO_MAX_POI) return alert(`Massimo ${GEO_MAX_POI} POI per pass (limite Apple Wallet)`);
+    if (geoLocations.length >= GEO_MAX_POI) return toast(`Massimo ${GEO_MAX_POI} POI per pass (limite Apple Wallet)`);
     geoLocations.push({ name: '', latitude: '', longitude: '', relevantText: '', address: '' });
     geoOpenIndex = geoLocations.length - 1;
     renderGeoLocations();
@@ -8832,9 +8832,9 @@ async function saveGeofencing() {
         const la = parseFloat(loc.latitude);
         const lo = parseFloat(loc.longitude);
         if (!Number.isFinite(la) || !Number.isFinite(lo)) {
-            return alert(`POI #${i + 1}: cerca e seleziona un indirizzo dai risultati (oppure compila le coordinate nel blocco back-office).`);
+            return toast(`POI #${i + 1}: cerca e seleziona un indirizzo dai risultati (oppure compila le coordinate nel blocco back-office).`);
         }
-        if (!loc.relevantText || !String(loc.relevantText).trim()) return alert(`POI #${i+1}: inserisci il messaggio vicino al POI`);
+        if (!loc.relevantText || !String(loc.relevantText).trim()) return toast(`POI #${i+1}: inserisci il messaggio vicino al POI`);
     }
     const channel = 'all';
     // Raggio unico per tutto il pass (standard 100 m), uguale per tutti i POI.
@@ -9111,7 +9111,7 @@ function openStripPromoModal() {
 
 async function saveStripPromo() {
     const name = document.getElementById('spName').value;
-    if (!name) return alert('Nome obbligatorio');
+    if (!name) return toast('Nome obbligatorio');
     const file = document.getElementById('spImage').files[0];
     let strip_base64 = null;
     if (file) {
@@ -12488,11 +12488,11 @@ function wzPickFromMedia(target) {
         if (target === 'strip') {
             wzSetStripPreview(base64, dataUrl);
             window._wzSelectedStrip = { mediaId, imageUrl };
-            toast('Strip dalla Media Library');
+            toast('Strip da Immagini e loghi');
         } else if (target === 'logo') {
             wzSetLogoPreview(base64, dataUrl);
             window._wzSelectedLogo = { mediaId, imageUrl };
-            toast('Logo dalla Media Library');
+            toast('Logo da Immagini e loghi');
         }
         wzUpdatePreview();
     }, 'all');
@@ -12524,7 +12524,7 @@ async function tplPickFromMedia(imageType) {
             toast('Icona notifiche selezionata — salva il template per confermare');
             return;
         }
-        toast(mediaTypeLabel(imageType) + ' dalla Media Library');
+        toast(mediaTypeLabel(imageType) + ' da Immagini e loghi');
     }, pickerFilter);
 }
 
@@ -14468,7 +14468,7 @@ async function savePassDesign() {
         });
         saved = true;
     }
-    if (!saved) return toast('Seleziona un file o usa Media Library');
+    if (!saved) return toast('Seleziona un file o usa Immagini e loghi');
     toast('Immagini pass salvate!');
 }
 

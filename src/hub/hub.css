@@ -5,7 +5,7 @@
   --hub-surface: #1e293b;
   --hub-surface-2: #334155;
   --hub-text: #f8fafc;
-  --hub-muted: #94a3b8;
+  --hub-muted: #b0bac9;
   --hub-border: rgba(148, 163, 184, 0.2);
   --hub-radius: 14px;
   --hub-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
@@ -138,7 +138,10 @@ input {
 
 .hub-chip {
   flex: 0 0 auto;
-  padding: 8px 12px;
+  padding: 10px 15px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
   border: 1px solid var(--hub-border);
   background: var(--hub-surface);
@@ -304,7 +307,8 @@ input {
   gap: 8px;
   width: 100%;
   margin-top: 10px;
-  padding: 12px 14px;
+  padding: 14px 16px;
+  min-height: 48px;
   border: none;
   border-radius: 12px;
   background: var(--hub-accent);

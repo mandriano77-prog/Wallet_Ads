@@ -100,7 +100,11 @@
 <body>
   <div class="wrap">
     <div id="loading" class="card"><p>Caricamento…</p></div>
-    <div id="error" class="card hidden"><p class="err" id="errorText"></p></div>
+    <div id="error" class="card hidden">
+      <p class="err" id="errorText"></p>
+      <a id="errorAction" class="hidden" href="#" style="display:inline-block;margin-top:14px;padding:13px 22px;border-radius:10px;background:var(--brand-accent,#8B5CF6);color:#fff;text-decoration:none;font-weight:600;">Richiedi un nuovo link</a>
+      <p id="errorHint" class="hidden" style="margin-top:12px;font-size:13px;color:#64748B;line-height:1.5;">Oppure contatta il tuo referente HR per ricevere un nuovo invito.</p>
+    </div>
     <div id="formCard" class="card hidden">
       <img class="brand-mark" id="brandLogo" alt="">
       <div class="badge">Filodiretto</div>
@@ -121,6 +125,7 @@
       <h2>Preferenze privacy (opzionali)</h2>
       <div id="consents"></div>
       <button type="button" class="primary" id="submit-activation" disabled>Conferma e genera pass</button>
+      <p class="err hidden" id="submitError" role="alert" style="margin-top:10px;"></p>
     </div>
   </div>
   <script>
@@ -194,6 +199,12 @@
       if (!res.ok) {
         document.getElementById('error').classList.remove('hidden');
         document.getElementById('errorText').textContent = data.error || 'Link non valido o scaduto.';
+        if (data.join_url) {
+          const action = document.getElementById('errorAction');
+          action.href = data.join_url;
+          action.classList.remove('hidden');
+        }
+        document.getElementById('errorHint').classList.remove('hidden');
         return;
       }
       state = data;
@@ -245,6 +256,11 @@
     submitBtn.addEventListener('click', async () => {
       if (!privacyBox.checked) return;
       submitBtn.disabled = true;
+      const submitLabel = submitBtn.textContent;
+      submitBtn.textContent = 'Generazione del pass in corso…';
+      submitBtn.setAttribute('aria-busy', 'true');
+      const submitError = document.getElementById('submitError');
+      if (submitError) { submitError.classList.add('hidden'); submitError.textContent = ''; }
       const consents = {};
       document.querySelectorAll('[data-consent]').forEach((el) => {
         consents[el.getAttribute('data-consent')] = el.checked;
@@ -273,8 +289,14 @@
         }
         throw new Error('Link di download non disponibile');
       } catch (e) {
-        alert(e.message);
+        const errEl = document.getElementById('submitError');
+        if (errEl) {
+          errEl.textContent = e.message + ' — riprova, oppure contatta il tuo referente HR.';
+          errEl.classList.remove('hidden');
+        }
         submitBtn.disabled = !privacyBox.checked;
+        submitBtn.textContent = submitLabel;
+        submitBtn.removeAttribute('aria-busy');
       }
     });
 
