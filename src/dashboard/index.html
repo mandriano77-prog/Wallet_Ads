@@ -25,8 +25,8 @@
             var fdLegacyMediaHide = document.createElement('style');
             fdLegacyMediaHide.textContent = "html[data-app='filodiretto'] #media-library #a2wMediaTabs{display:none!important}";
             document.head.appendChild(fdLegacyMediaHide);
-            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260709-extra3';
-            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260709-extra3';
+            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260709-extra-api';
+            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260709-extra-api';
             var fdCss = ['/filodiretto/tokens.css', '/filodiretto/fd-theme.css', '/filodiretto/fd-typography.css', '/filodiretto/fd-buttons.css', '/filodiretto/fd-components.css', '/filodiretto/fd-header.css', '/filodiretto/fd-layout.css', '/filodiretto/fd-wide-layout.css', '/filodiretto/fd-mobile-gate.css', '/filodiretto/fd-wai.css', '/filodiretto/fd-brand-switcher.css', '/filodiretto/fd-nav.css', '/filodiretto/fd-brand-identity.css', '/filodiretto/fd-brand-scope.css', '/filodiretto/fd-home.css', '/filodiretto/fd-users.css', '/filodiretto/fd-contacts.css', '/filodiretto/fd-media-library.css', '/filodiretto/fd-destructive.css', '/filodiretto/fd-form-dirty.css', '/filodiretto/fd-form-help.css', '/filodiretto/fd-empty-states.css', '/filodiretto/fd-page-states.css', '/filodiretto/fd-danger-zone.css', '/filodiretto/fd-push.css', '/filodiretto/fd-reward-challenge.css', '/filodiretto/fd-analytics.css', '/filodiretto/fd-audiences.css', '/filodiretto/fd-conventions.css', '/filodiretto/fd-pga.css', '/filodiretto/fd-activity-log.css', '/filodiretto/fd-responsive-tables.css'];
             var fdJs = ['/filodiretto/fd-buttons.js', '/filodiretto/fd-header.js', '/filodiretto/fd-layout.js', '/filodiretto/fd-mobile-gate.js', '/filodiretto/fd-wai.js', '/filodiretto/fd-brand-switcher.js', '/filodiretto/fd-icons.js', '/filodiretto/fd-nav.js', '/filodiretto/fd-legacy-campaigns.js', '/filodiretto/fd-hr-copy.js', '/filodiretto/fd-brand-scope.js', '/filodiretto/fd-brand-identity.js', '/filodiretto/fd-brand-pass-flow.js', '/filodiretto/fd-home.js', '/filodiretto/fd-users.js', '/filodiretto/fd-contacts.js', '/filodiretto/fd-media-library.js', '/filodiretto/fd-templates.js', '/filodiretto/fd-passes.js', '/filodiretto/fd-destructive.js', '/filodiretto/fd-form-dirty.js', '/filodiretto/fd-form-help.js', '/filodiretto/fd-form-a11y.js', '/filodiretto/fd-empty-states.js', '/filodiretto/fd-page-states.js', '/filodiretto/fd-danger-zone.js', '/filodiretto/fd-rbac.js', '/filodiretto/fd-push.js', '/filodiretto/fd-reward-challenge.js', '/filodiretto/fd-analytics.js', '/filodiretto/fd-audiences.js', '/filodiretto/fd-conventions.js', '/filodiretto/fd-pga.js', '/filodiretto/fd-pga-engagement.js', '/filodiretto/fd-activity-log.js', '/filodiretto/fd-responsive-tables.js', '/filodiretto/fd-profile.js'];
             var useFdBundle = window.location.search.indexOf('fd_nobundle') === -1;
@@ -3238,6 +3238,20 @@
                 <div style="margin-top:16px;">
                     <button type="button" class="btn" id="extraSaveBtn" onclick="saveExtraConfig()">Salva integrazioni</button>
                     <span id="extraSaveStatus" style="margin-left:12px;font-size:13px;"></span>
+                </div>
+                <div class="card" style="margin-top:24px;padding:16px;max-width:640px;">
+                    <h2 class="block-title" style="font-size:15px;margin:0 0 8px;">Import via API (gestionale)</h2>
+                    <p style="color:var(--text2);font-size:13px;margin:0 0 12px;">Il tuo gestionale può caricare i dati (matricola, periodo, importo, link) automaticamente, senza CSV manuale. Genera una chiave API e usala nell'header <code>X-Api-Key</code>.</p>
+                    <div id="extraApiKeyStatus" style="font-size:13px;color:var(--text2);margin-bottom:10px;"></div>
+                    <button type="button" class="btn sec small" onclick="generateExtraApiKey()">Genera nuova chiave</button>
+                    <div id="extraApiKeyReveal" style="display:none;margin-top:12px;">
+                        <label class="form-label">Chiave API (mostrata una sola volta — copiala ora)</label>
+                        <input type="text" id="extraApiKeyValue" readonly onclick="this.select()" style="width:100%;font-family:monospace;font-size:12px;">
+                    </div>
+                    <details style="margin-top:14px;">
+                        <summary style="cursor:pointer;font-size:12px;color:var(--text2);">Esempio chiamata</summary>
+                        <pre id="extraApiExample" style="background:var(--bg-subtle);padding:12px;border-radius:8px;font-size:11px;overflow:auto;margin-top:8px;"></pre>
+                    </details>
                 </div>
             </div>
 
@@ -8921,6 +8935,7 @@ async function loadExtraAdmin() {
         extraProvidersCache = data.available_providers || [];
         const active = new Map((data.integrations || []).map(it => [it.type, it]));
         renderExtraAdmin(extraProvidersCache, active);
+        loadExtraApiKeyStatus();
     } catch (e) {
         if (host) host.innerHTML = '<p style="color:var(--red)">Errore caricamento integrazioni</p>';
     }
@@ -9031,6 +9046,38 @@ function parseExtraCsv(text) {
         rows.push(row);
     }
     return rows;
+}
+
+async function loadExtraApiKeyStatus() {
+    const el = document.getElementById('extraApiKeyStatus');
+    const ex = document.getElementById('extraApiExample');
+    if (ex) ex.textContent = `curl -X POST ${location.origin}/api/v1/integrations/import \\
+  -H "X-Api-Key: LA_TUA_CHIAVE" \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"satispay","rows":[{"matricola":"E00123","periodo":"2026-07","importo":176.00,"link":"https://..."}]}'`;
+    if (!el || !brandId) return;
+    try {
+        const d = await fetch(`${API}/brands/${brandId}/integrations/api-key`, { headers: getAuthHeaders() }).then(r => r.json());
+        el.textContent = d.configured
+            ? `Chiave attiva (${d.prefix}…) · creata il ${d.created_at ? new Date(d.created_at).toLocaleDateString('it-IT') : '—'}` + (d.last_used_at ? ` · ultimo uso ${new Date(d.last_used_at).toLocaleDateString('it-IT')}` : ' · mai usata')
+            : 'Nessuna chiave attiva.';
+    } catch (_) { el.textContent = ''; }
+}
+
+async function generateExtraApiKey() {
+    if (!brandId) return toast('Seleziona un brand');
+    if (!confirm('Generare una nuova chiave API? Le chiavi precedenti smetteranno di funzionare.')) return;
+    try {
+        const res = await fetch(`${API}/brands/${brandId}/integrations/api-key`, { method: 'POST', headers: getAuthHeaders() });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Errore');
+        const reveal = document.getElementById('extraApiKeyReveal');
+        const val = document.getElementById('extraApiKeyValue');
+        if (val) val.value = data.api_key;
+        if (reveal) reveal.style.display = 'block';
+        loadExtraApiKeyStatus();
+        toast('Chiave generata — copiala ora, non sarà più mostrata');
+    } catch (e) { toast('Errore: ' + e.message); }
 }
 
 // --- Storico ---

@@ -209,3 +209,25 @@ Nessuna domanda aperta bloccante. Unica dipendenza esterna: le **API dei provide
 - Non ricreiamo il saldo buoni pasto senza l'API ufficiale del provider.
 - Non gestiamo pagamenti/spesa dei buoni (Livello 3, fuori scope).
 - Non mettiamo questa roba nell'HUB Convenzioni (superfici e scopi diversi).
+
+---
+
+## Aggiornamento — Import via API (macchina-a-macchina)
+
+Il caricamento dati per dipendente (caricato mensile + link personale) può
+avvenire **automaticamente dal gestionale del brand**, non solo via CSV manuale.
+
+- **Chiave API per brand** (`integration_api_keys`, solo hash SHA-256 salvato;
+  valore in chiaro mostrato una volta alla generazione). Gestita nella tab EXTRA:
+  genera / stato / revoca.
+- **Endpoint macchina**: `POST /api/v1/integrations/import` — auth via header
+  `X-Api-Key` (NON login dashboard), rate limit 30/min, provider dev'essere
+  abilitato. Body: `{ type, rows: [{ matricola, periodo?, importo?, link? }] }`.
+- Stesso motore di merge mensile del CSV (`data.months` accumulato per periodo).
+
+Esempio:
+```
+curl -X POST https://studio.filodiretto.app/api/v1/integrations/import \
+  -H "X-Api-Key: fd_..." -H "Content-Type: application/json" \
+  -d '{"type":"satispay","rows":[{"matricola":"E00123","periodo":"2026-07","importo":176.00,"link":"https://..."}]}'
+```

@@ -1685,6 +1685,20 @@ async function ensureMembersHrSchema() {
   await pool.query(
     `CREATE INDEX IF NOT EXISTS idx_member_integrations_brand ON member_integrations(brand_id, type)`
   ).catch(logSchemaError);
+
+  // EXTRA — chiavi API per import macchina-a-macchina (gestionale → noi).
+  // Si memorizza solo l'hash SHA-256 della chiave; il valore in chiaro è mostrato
+  // una sola volta alla generazione.
+  await pool.query(`CREATE TABLE IF NOT EXISTS integration_api_keys (
+    key_hash TEXT PRIMARY KEY,
+    brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+    prefix TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    last_used_at TIMESTAMPTZ
+  )`).catch(logSchemaError);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_integration_api_keys_brand ON integration_api_keys(brand_id)`
+  ).catch(logSchemaError);
 }
 
 async function getMemberForPass(passId) {

@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const { randomUUID } = require('crypto');
+const { randomUUID, randomBytes, createHash } = require('crypto');
 
 function getPool() {
   const { pool } = require('./index');
@@ -134,9 +134,56 @@ async function bulkUpsertByEmployeeId(brandId, type, rows) {
   return { updated, not_found: notFound };
 }
 
+function hashApiKey(key) {
+  return createHash('sha256').update(String(key)).digest('hex');
+}
+
+/** Genera una nuova chiave API per il brand (revoca le precedenti). Ritorna il
+ *  valore in chiaro (mostrato UNA volta) + prefisso per riconoscerla. */
+async function createBrandApiKey(brandId) {
+  const pool = getPool();
+  const key = 'fd_' + randomBytes(24).toString('hex');
+  const prefix = key.slice(0, 10);
+  await pool.query('DELETE FROM integration_api_keys WHERE brand_id = $1', [brandId]);
+  await pool.query(
+    'INSERT INTO integration_api_keys (key_hash, brand_id, prefix) VALUES ($1,$2,$3)',
+    [hashApiKey(key), brandId, prefix]
+  );
+  return { key, prefix };
+}
+
+/** Ritorna il brand_id se la chiave è valida, altrimenti null. */
+async function verifyBrandApiKey(key) {
+  if (!key || !String(key).startsWith('fd_')) return null;
+  const pool = getPool();
+  const r = await pool.query(
+    'SELECT brand_id FROM integration_api_keys WHERE key_hash = $1 LIMIT 1',
+    [hashApiKey(key)]
+  );
+  if (!r.rows[0]) return null;
+  pool.query('UPDATE integration_api_keys SET last_used_at = NOW() WHERE key_hash = $1', [hashApiKey(key)]).catch(() => {});
+  return r.rows[0].brand_id;
+}
+
+async function getBrandApiKeyInfo(brandId) {
+  const r = await getPool().query(
+    'SELECT prefix, created_at, last_used_at FROM integration_api_keys WHERE brand_id = $1 LIMIT 1',
+    [brandId]
+  );
+  return r.rows[0] || null;
+}
+
+async function revokeBrandApiKeys(brandId) {
+  await getPool().query('DELETE FROM integration_api_keys WHERE brand_id = $1', [brandId]);
+}
+
 module.exports = {
   bulkUpsertByEmployeeId,
   normalizePeriod,
+  createBrandApiKey,
+  verifyBrandApiKey,
+  getBrandApiKeyInfo,
+  revokeBrandApiKeys,
   listMemberIntegrations,
   getMemberIntegration,
   upsertMemberIntegration,

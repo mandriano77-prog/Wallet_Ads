@@ -59,7 +59,7 @@ const {
 } = require('../db');
 const { buildGeofenceDiagnostics } = require('../engine/geofencing');
 const { availableProviders, enabledIntegrations, getAdapter } = require('../engine/integrations');
-const { bulkUpsertByEmployeeId } = require('../db/integrations');
+const { bulkUpsertByEmployeeId, createBrandApiKey, verifyBrandApiKey, getBrandApiKeyInfo, revokeBrandApiKeys } = require('../db/integrations');
 const {
   getPassHoldersInsights,
   countAudienceMembers,
@@ -1392,6 +1392,7 @@ function isJwtBypassRoute(req) {
   const m = req.method;
   if (m === 'GET' && /^\/play\/[^/]+\/info$/.test(path)) return true;
   if (m === 'POST' && /^\/play\/[^/]+$/.test(path)) return true;
+  if (m === 'POST' && path === '/integrations/import') return true;
   if (m === 'GET' && /^\/game\/[^/]+\/info$/.test(path)) return true;
   if (m === 'POST' && /^\/game\/[^/]+$/.test(path)) return true;
   if (m === 'GET' && /^\/banners\/[^/]+\/serve$/.test(path)) return true;
@@ -3037,6 +3038,60 @@ router.post('/brands/:id/integrations/:type/import', async (req, res) => {
     const result = await bulkUpsertByEmployeeId(req.params.id, type, rows);
     res.json({ success: true, ...result });
   } catch (err) { res.status(err.statusCode || 500).json({ error: err.message }); }
+});
+
+// Chiave API per import macchina-a-macchina (gestionale del brand → noi).
+router.get('/brands/:id/integrations/api-key', async (req, res) => {
+  try {
+    if (!requireOwnedBrandPk(req, res, req.params.id)) return;
+    const info = await getBrandApiKeyInfo(req.params.id);
+    res.json({ configured: !!info, prefix: info?.prefix || null, created_at: info?.created_at || null, last_used_at: info?.last_used_at || null });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/brands/:id/integrations/api-key', async (req, res) => {
+  try {
+    if (!requireOwnedBrandPk(req, res, req.params.id)) return;
+    if (!requireWriteAccess(req, res)) return;
+    const { key, prefix } = await createBrandApiKey(req.params.id);
+    // key mostrata UNA sola volta.
+    res.json({ success: true, api_key: key, prefix });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/brands/:id/integrations/api-key', async (req, res) => {
+  try {
+    if (!requireOwnedBrandPk(req, res, req.params.id)) return;
+    if (!requireWriteAccess(req, res)) return;
+    await revokeBrandApiKeys(req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Import macchina-a-macchina: autenticato con X-Api-Key (NON login dashboard).
+// Il gestionale del brand chiama qui per caricare i buoni mese per mese.
+// Body: { type, rows: [{ matricola, periodo?, importo?, link? }] }.
+const integrationsImportLimiter = require('express-rate-limit')({
+  windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Troppe richieste. Max 30/min.' },
+});
+router.post('/integrations/import', integrationsImportLimiter, async (req, res) => {
+  try {
+    const key = req.get('x-api-key') || (req.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+    const brandId = await verifyBrandApiKey(key);
+    if (!brandId) return res.status(401).json({ error: 'Chiave API non valida' });
+    const type = String(req.body?.type || '').trim();
+    if (!getAdapter(type)) return res.status(400).json({ error: 'Provider sconosciuto' });
+    const brand = await getBrand(brandId);
+    const active = Array.isArray(brand?.config?.integrations) ? brand.config.integrations : [];
+    if (!active.find((it) => it.type === type && it.enabled)) {
+      return res.status(400).json({ error: 'Provider non abilitato per questo brand' });
+    }
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 20000) : [];
+    if (!rows.length) return res.status(400).json({ error: 'Nessuna riga (rows) da importare' });
+    const result = await bulkUpsertByEmployeeId(brandId, type, rows);
+    res.json({ success: true, ...result });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Analytics ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ

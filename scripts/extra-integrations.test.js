@@ -77,3 +77,19 @@ test('normalizePeriod: formati mese vari', () => {
   const cur = normalizePeriod('');
   assert.match(cur.period, /^\d{4}-\d{2}$/); // vuoto → mese corrente
 });
+
+test('routes: endpoint import macchina-a-macchina + bypass JWT', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const routes = fs.readFileSync(path.join(__dirname, '../src/api/routes.js'), 'utf8');
+  assert.match(routes, /router\.post\('\/integrations\/import'/);
+  assert.match(routes, /verifyBrandApiKey/);
+  assert.match(routes, /path === '\/integrations\/import'\) return true/); // nel bypass JWT
+  assert.match(routes, /x-api-key/i);
+});
+
+test('db: funzioni chiave API esportate', () => {
+  const m = require('../src/db/integrations');
+  ['createBrandApiKey', 'verifyBrandApiKey', 'getBrandApiKeyInfo', 'revokeBrandApiKeys']
+    .forEach((fn) => assert.equal(typeof m[fn], 'function', fn));
+});
