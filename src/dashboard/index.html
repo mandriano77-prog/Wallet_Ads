@@ -1964,11 +1964,6 @@
                         <div style="margin:10px 0 14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-subtle);font-size:12px;line-height:1.45;color:var(--text2);">
                             Dopo aver aggiunto o modificato un POI premi <strong>Salva e aggiorna pass</strong>. Apple aggiorna il pass via APNs e usa il testo quando propone il pass vicino al POI; Google aggiorna le merchant location e invia anche il messaggio Wallet ai pass salvati.
                         </div>
-                        <div class="form-group" style="margin-bottom:14px;">
-                            <label class="form-label" for="geoMaxDistance">Raggio di rilevamento (metri)</label>
-                            <input type="number" id="geoMaxDistance" value="500" min="100" max="5000" step="100" style="width:120px;" onchange="renderGeoLocations()" oninput="renderGeoLocations()">
-                            <p class="form-hint" style="margin:4px 0 0;font-size:11px;color:var(--text2);">Un solo raggio per tutto il pass Apple Wallet (100–5000 m). Google decide autonomamente distanza e tempi (Nearby Notifications).</p>
-                        </div>
                         <div id="geoLocationsList"></div>
                         <div id="geoEmptyMsg" style="padding:20px;text-align:center;color:var(--text2);font-size:13px;border:1px dashed var(--border);border-radius:8px;">
                             Nessun punto di prossimità configurato. Clicca "+ Aggiungi POI" per iniziare.
@@ -8506,15 +8501,15 @@ function geoHasValidCoords(loc) {
     return Number.isFinite(la) && Number.isFinite(lo);
 }
 
-function getGeoMaxDistanceValue() {
-    const n = parseInt(document.getElementById('geoMaxDistance')?.value, 10);
+function clampGeoRadius(value) {
+    const n = parseInt(value, 10);
     if (Number.isFinite(n) && n >= 100) return Math.min(n, 5000);
     return 500;
 }
 
 function addGeoLocation() {
     if (geoLocations.length >= GEO_MAX_POI) return alert(`Massimo ${GEO_MAX_POI} POI per pass (limite Apple Wallet)`);
-    geoLocations.push({ name: '', latitude: '', longitude: '', radius: getGeoMaxDistanceValue(), relevantText: '', address: '' });
+    geoLocations.push({ name: '', latitude: '', longitude: '', radius: 500, relevantText: '', address: '' });
     geoOpenIndex = geoLocations.length - 1;
     renderGeoLocations();
 }
@@ -8547,21 +8542,11 @@ function updateGeoPoiCounter() {
     }
 }
 
-function geoMapEmbedUrl(loc) {
-    const la = parseFloat(loc.latitude);
-    const lo = parseFloat(loc.longitude);
-    const radius = getGeoMaxDistanceValue();
-    if (!Number.isFinite(la) || !Number.isFinite(lo)) return '';
-    const delta = Math.max(0.002, (radius / 111320) * 3);
-    const bbox = `${lo - delta},${la - delta},${lo + delta},${la + delta}`;
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(`${la},${lo}`)}`;
-}
-
 function geoMapOpenUrl(loc) {
     const la = parseFloat(loc.latitude);
     const lo = parseFloat(loc.longitude);
     if (!Number.isFinite(la) || !Number.isFinite(lo)) return '';
-    return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(la)}&mlon=${encodeURIComponent(lo)}#map=18/${encodeURIComponent(la)}/${encodeURIComponent(lo)}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(la + ',' + lo)}`;
 }
 
 function clearGeoAddress(i) {
@@ -8692,15 +8677,6 @@ async function enrichGeoAddressesFromCoords() {
     else if (!changed && tried > 0 && failures && !rate429) toast('Alcuni indirizzi POI non sono stati recuperati.');
 }
 
-function focusGeoRadius() {
-    const el = document.getElementById('geoMaxDistance');
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.focus({ preventScroll: true });
-    el.style.outline = '2px solid var(--accent)';
-    setTimeout(() => { el.style.outline = ''; }, 1600);
-}
-
 function renderGeoLocations() {
     const container = document.getElementById('geoLocationsList');
     const empty = document.getElementById('geoEmptyMsg');
@@ -8712,11 +8688,10 @@ function renderGeoLocations() {
     }
     empty.style.display = 'none';
     const latVal = (v) => (v === '' || v === undefined || v === null ? '' : v);
-    const globalRadius = getGeoMaxDistanceValue();
     container.innerHTML = geoLocations.map((loc, i) => {
         const hasCoords = geoHasValidCoords(loc);
         const hasLabel = loc.address && String(loc.address).trim();
-        const radius = globalRadius;
+        const radius = clampGeoRadius(loc.radius);
         const title = String(loc.name || '').trim() || `POI #${i + 1}`;
         const summaryText = hasLabel ? String(loc.address).trim() : 'Indirizzo da selezionare';
         const statusChip = hasCoords
@@ -8773,7 +8748,7 @@ function renderGeoLocations() {
                     </div>
                     <div class="geo-poi-summary-meta">
                         <span class="geo-poi-summary-main">${esc(summaryText)}</span>
-                        <button type="button" onclick="event.preventDefault();event.stopPropagation();focusGeoRadius();" style="background:none;border:none;padding:0;cursor:pointer;color:var(--accent);font-size:inherit;" title="Il raggio è unico per tutto il pass Apple — clicca per modificarlo">Raggio ${radius} m ✎</button>
+                        <span>Raggio ${radius} m</span>
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;">
@@ -8782,9 +8757,16 @@ function renderGeoLocations() {
                 </div>
             </summary>
             <div class="geo-poi-body">
-                <div class="form-group" style="margin-bottom:10px;">
-                    <label class="form-label">Nome interno (opzionale)</label>
-                    <input type="text" value="${esc(loc.name)}" onchange="updateGeoField(${i},'name',this.value);renderGeoLocations();" placeholder="es. Sede centro">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <div class="form-group" style="flex:2;min-width:180px;margin-bottom:10px;">
+                        <label class="form-label">Nome interno (opzionale)</label>
+                        <input type="text" value="${esc(loc.name)}" onchange="updateGeoField(${i},'name',this.value);renderGeoLocations();" placeholder="es. Sede centro">
+                    </div>
+                    <div class="form-group" style="flex:1;min-width:140px;margin-bottom:10px;">
+                        <label class="form-label">Raggio (metri)</label>
+                        <input type="number" min="100" max="5000" step="100" value="${radius}" onchange="updateGeoField(${i},'radius',clampGeoRadius(this.value));renderGeoLocations();">
+                        <p class="form-hint" style="margin:4px 0 0;font-size:10px;color:var(--text2);">Apple applica al pass il raggio più grande tra i POI (limite: un solo raggio per pass); Google decide autonomamente.</p>
+                    </div>
                 </div>
                 ${addrBlock}
                 ${coordsDetails}
@@ -8826,14 +8808,7 @@ async function loadGeofencing() {
             ...loc,
             address: loc.address || ''
         }));
-        const loadedMax = parseInt(data.maxDistance, 10);
-        const fallbackRadius = geoLocations.reduce((max, loc) => {
-            const r = parseInt(loc.radius, 10);
-            return Number.isFinite(r) && r > max ? r : max;
-        }, 0);
-        document.getElementById('geoMaxDistance').value = (Number.isFinite(loadedMax) && loadedMax >= 100)
-            ? Math.min(loadedMax, 5000)
-            : (fallbackRadius >= 100 ? Math.min(fallbackRadius, 5000) : 500);
+        geoLocations = geoLocations.map((loc) => ({ ...loc, radius: clampGeoRadius(loc.radius) }));
         const geoChannelEl = document.getElementById('geoChannel');
         if (geoChannelEl) geoChannelEl.value = 'all';
         renderGeoLocations();
@@ -8854,9 +8829,10 @@ async function saveGeofencing() {
         }
         if (!loc.relevantText || !String(loc.relevantText).trim()) return alert(`POI #${i+1}: inserisci il messaggio vicino al POI`);
     }
-    const maxDistance = getGeoMaxDistanceValue();
     const channel = 'all';
-    const locationsPayload = geoLocations.map((loc) => ({ ...loc, radius: maxDistance }));
+    const locationsPayload = geoLocations.map((loc) => ({ ...loc, radius: clampGeoRadius(loc.radius) }));
+    // Apple ha un solo maxDistance per pass: usa il raggio più grande tra i POI.
+    const maxDistance = locationsPayload.reduce((max, loc) => Math.max(max, loc.radius), 0) || 500;
     const statusEl = document.getElementById('geoSaveStatus');
     const btn = document.getElementById('geoSaveBtn');
     const topBtn = document.getElementById('geoSaveBtnTop');
@@ -8891,6 +8867,7 @@ async function saveGeofencing() {
         statusEl.style.color = 'var(--green)';
         await renderGeoDiagnostics(data.diagnostics);
         toast('Geofencing salvato.');
+        geoOpenIndex = null; // richiudi la fisarmonica dei POI dopo il salvataggio
         await loadGeofencing();
     } catch (e) {
         statusEl.textContent = 'Errore: ' + e.message;

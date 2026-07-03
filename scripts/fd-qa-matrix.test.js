@@ -425,7 +425,7 @@ test('Push hides wallet channel selection and defaults sends to every wallet cha
   assert.match(routes, /apple,google/);
 });
 
-test('Geofencing POIs render as compact list with quota counter and map preview', () => {
+test('Geofencing POIs render as compact list with quota counter and per-POI radius', () => {
   const dashboard = read('src/dashboard/index.html');
   assert.match(dashboard, /const GEO_MAX_POI = 10/);
   assert.match(dashboard, /id="geoPoiCounter"/);
@@ -435,9 +435,15 @@ test('Geofencing POIs render as compact list with quota counter and map preview'
   assert.match(dashboard, /Google aggiorna le merchant location e invia anche il messaggio Wallet/);
   assert.match(dashboard, /class="geo-poi-item"/);
   assert.match(dashboard, /class="geo-poi-summary"/);
-  assert.match(dashboard, /openstreetmap\.org\/export\/embed\.html/);
+  // Mappa embed rimossa (rumore); verifica esterna su Google Maps.
+  assert.doesNotMatch(dashboard, /openstreetmap\.org\/export\/embed\.html/);
+  assert.match(dashboard, /google\.com\/maps\/search/);
+  // Raggio per singolo POI (Apple applica comunque il più grande al pass).
+  assert.match(dashboard, /updateGeoField\(\$\{i\},'radius',clampGeoRadius\(this\.value\)\)/);
   assert.match(dashboard, /Raggio \$\{radius\} m/);
   assert.match(dashboard, /te ne mancano/);
+  // Fisarmonica chiusa dopo il salvataggio.
+  assert.match(dashboard, /geoOpenIndex = null; \/\/ richiudi la fisarmonica/);
 });
 
 test('Challenge hides table head when gamEmptyHost is visible', () => {

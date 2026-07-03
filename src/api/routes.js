@@ -2810,7 +2810,7 @@ router.get('/brands/:id/geofencing', async (req, res) => {
       pool.query('SELECT id, google_wallet_object_id FROM pass_instances WHERE brand_id = $1', [req.params.id]),
       getDevicesForBrand(req.params.id),
       getHubSettings(req.params.id),
-      listMerchantGeofenceLocationsForBrand(req.params.id),
+      Promise.resolve([]), // merchant HUB esclusi dal geofencing pass (luglio 2026)
     ]);
     const googleObjects = passRows.rows.filter((p) => !!p.google_wallet_object_id).length;
     const diagnostics = buildGeofenceDiagnostics({
@@ -2921,7 +2921,7 @@ router.put('/brands/:id/geofencing', async (req, res) => {
     }
 
     const hubSettings = await getHubSettings(req.params.id);
-    const hubMerchantLocations = await listMerchantGeofenceLocationsForBrand(req.params.id);
+    const hubMerchantLocations = []; // merchant HUB esclusi dal geofencing pass (luglio 2026)
     const diagnostics = buildGeofenceDiagnostics({
       brandConfig: config,
       hubSettings,

@@ -1199,7 +1199,7 @@ async function createPkpass(template, instance, brand, options = {}) {
   if (hrBrand && instance?.serial_number && (process.env.JWT_HUB_SECRET || process.env.JWT_SECRET)) {
     try {
       const { signHubToken, buildHubUrl, buildHubAppUrl } = require('./hub-jwt');
-      const { listMerchantGeofenceLocationsForBrand, getPgaSettings, getHubSettings } = require('../db');
+      const { getPgaSettings } = require('../db');
       const userId = member?.id || instance.member_id || null;
       const token = signHubToken({
         user_id: userId,
@@ -1208,10 +1208,10 @@ async function createPkpass(template, instance, brand, options = {}) {
       });
       hubUrl = buildHubUrl(token, brand.slug);
       meUrl = buildHubAppUrl(token, brand.slug, 'me');
-      const hubSettings = await getHubSettings(brand.id);
-      if (hubSettings.geofencing_enabled !== false) {
-        hubLocations = await listMerchantGeofenceLocationsForBrand(brand.id);
-      }
+      // Decisione proprietario (luglio 2026): i merchant dell'HUB convenzioni NON
+      // entrano più nel geofencing del pass — occupavano i 10 slot Apple con
+      // priorità ed escludevano i POI del brand. I POI vivono solo nel pannello
+      // Geofencing; un convenzionato che vuole il geofence si aggiunge lì.
       const pgaSettings = await getPgaSettings(brand.id);
       if (pgaSettings.enabled) {
         pgaUrl = buildHubAppUrl(token, brand.slug, 'pga');
