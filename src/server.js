@@ -371,7 +371,10 @@ app.get('/health', async (req, res) => {
     ai: {
       anthropic_configured: isAnthropicConfigured(),
       fal_configured: isFalConfigured()
-    }
+    },
+    // Provider geocoding POI: 'google' quando GOOGLE_MAPS_API_KEY è impostata
+    // (fallback automatico su OSM), altrimenti 'osm'. Solo il nome, mai la chiave.
+    geocode_provider: String(process.env.GOOGLE_MAPS_API_KEY || '').trim() ? 'google' : 'osm'
   };
   if (req.query.wallet) {
     try {
