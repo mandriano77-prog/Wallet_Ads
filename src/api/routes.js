@@ -2704,11 +2704,42 @@ function nominatimFormatLine(feature) {
   return feature.display_name || '';
 }
 
+// Provider geocoding: Google se GOOGLE_MAPS_API_KEY è impostata (civici molto più
+// affidabili in Italia), altrimenti Nominatim/OSM. Google giù → fallback su OSM.
+const GOOGLE_MAPS_API_KEY = String(process.env.GOOGLE_MAPS_API_KEY || '').trim();
+
+async function googleGeocode(params) {
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?${params}&language=it&region=it&key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`;
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  const data = await r.json().catch(() => null);
+  if (!data || data.status !== 'OK' || !Array.isArray(data.results) || !data.results.length) return null;
+  return data.results;
+}
+
+function googleGeocodeRow(x) {
+  return {
+    lat: x.geometry?.location?.lat,
+    lon: x.geometry?.location?.lng,
+    display_name: x.formatted_address || '',
+    address: x.formatted_address || '',
+  };
+}
+
 // GET /geocode/search?q=   → [{ lat, lon, display_name, address }]
 router.get('/geocode/search', async (req, res) => {
   try {
     const q = String(req.query.q || '').trim();
     if (q.length < 3) return res.json([]);
+    if (GOOGLE_MAPS_API_KEY) {
+      const results = await googleGeocode(`address=${encodeURIComponent(q)}`).catch(() => null);
+      if (results) {
+        return res.json(
+          results.slice(0, 8).map(googleGeocodeRow)
+            .filter((x) => Number.isFinite(x.lat) && Number.isFinite(x.lon))
+        );
+      }
+    }
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=8&addressdetails=1`;
     const r = await fetch(url, { headers: { 'User-Agent': NOMINATIM_UA, 'Accept-Language': 'it,en' } });
     if (r.status === 429) {
@@ -2738,6 +2769,13 @@ router.get('/geocode/reverse', async (req, res) => {
     const lon = parseFloat(req.query.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       return res.status(400).json({ error: 'lat e lon sono richiesti' });
+    }
+    if (GOOGLE_MAPS_API_KEY) {
+      const results = await googleGeocode(`latlng=${lat},${lon}`).catch(() => null);
+      if (results) {
+        const row = googleGeocodeRow(results[0]);
+        return res.json({ display_name: row.display_name, address: row.address, lat, lon });
+      }
     }
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`;
     const r = await fetch(url, { headers: { 'User-Agent': NOMINATIM_UA, 'Accept-Language': 'it,en' } });

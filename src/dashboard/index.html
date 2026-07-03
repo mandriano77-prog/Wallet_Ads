@@ -25,8 +25,8 @@
             var fdLegacyMediaHide = document.createElement('style');
             fdLegacyMediaHide.textContent = "html[data-app='filodiretto'] #media-library #a2wMediaTabs{display:none!important}";
             document.head.appendChild(fdLegacyMediaHide);
-            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260704-hook-110';
-            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260704-hook-110';
+            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260705-poi-sched';
+            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260705-poi-sched';
             var fdCss = ['/filodiretto/tokens.css', '/filodiretto/fd-theme.css', '/filodiretto/fd-typography.css', '/filodiretto/fd-buttons.css', '/filodiretto/fd-components.css', '/filodiretto/fd-header.css', '/filodiretto/fd-layout.css', '/filodiretto/fd-wide-layout.css', '/filodiretto/fd-mobile-gate.css', '/filodiretto/fd-wai.css', '/filodiretto/fd-brand-switcher.css', '/filodiretto/fd-nav.css', '/filodiretto/fd-brand-identity.css', '/filodiretto/fd-brand-scope.css', '/filodiretto/fd-home.css', '/filodiretto/fd-users.css', '/filodiretto/fd-contacts.css', '/filodiretto/fd-media-library.css', '/filodiretto/fd-destructive.css', '/filodiretto/fd-form-dirty.css', '/filodiretto/fd-form-help.css', '/filodiretto/fd-empty-states.css', '/filodiretto/fd-page-states.css', '/filodiretto/fd-danger-zone.css', '/filodiretto/fd-push.css', '/filodiretto/fd-reward-challenge.css', '/filodiretto/fd-analytics.css', '/filodiretto/fd-audiences.css', '/filodiretto/fd-conventions.css', '/filodiretto/fd-pga.css', '/filodiretto/fd-activity-log.css', '/filodiretto/fd-responsive-tables.css'];
             var fdJs = ['/filodiretto/fd-buttons.js', '/filodiretto/fd-header.js', '/filodiretto/fd-layout.js', '/filodiretto/fd-mobile-gate.js', '/filodiretto/fd-wai.js', '/filodiretto/fd-brand-switcher.js', '/filodiretto/fd-icons.js', '/filodiretto/fd-nav.js', '/filodiretto/fd-legacy-campaigns.js', '/filodiretto/fd-hr-copy.js', '/filodiretto/fd-brand-scope.js', '/filodiretto/fd-brand-identity.js', '/filodiretto/fd-brand-pass-flow.js', '/filodiretto/fd-home.js', '/filodiretto/fd-users.js', '/filodiretto/fd-contacts.js', '/filodiretto/fd-media-library.js', '/filodiretto/fd-templates.js', '/filodiretto/fd-passes.js', '/filodiretto/fd-destructive.js', '/filodiretto/fd-form-dirty.js', '/filodiretto/fd-form-help.js', '/filodiretto/fd-form-a11y.js', '/filodiretto/fd-empty-states.js', '/filodiretto/fd-page-states.js', '/filodiretto/fd-danger-zone.js', '/filodiretto/fd-rbac.js', '/filodiretto/fd-push.js', '/filodiretto/fd-reward-challenge.js', '/filodiretto/fd-analytics.js', '/filodiretto/fd-audiences.js', '/filodiretto/fd-conventions.js', '/filodiretto/fd-pga.js', '/filodiretto/fd-pga-engagement.js', '/filodiretto/fd-activity-log.js', '/filodiretto/fd-responsive-tables.js', '/filodiretto/fd-profile.js'];
             var useFdBundle = window.location.search.indexOf('fd_nobundle') === -1;
@@ -8692,6 +8692,15 @@ async function enrichGeoAddressesFromCoords() {
     else if (!changed && tried > 0 && failures && !rate429) toast('Alcuni indirizzi POI non sono stati recuperati.');
 }
 
+function focusGeoRadius() {
+    const el = document.getElementById('geoMaxDistance');
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.focus({ preventScroll: true });
+    el.style.outline = '2px solid var(--accent)';
+    setTimeout(() => { el.style.outline = ''; }, 1600);
+}
+
 function renderGeoLocations() {
     const container = document.getElementById('geoLocationsList');
     const empty = document.getElementById('geoEmptyMsg');
@@ -8714,23 +8723,15 @@ function renderGeoLocations() {
             ? '<span class="geo-poi-chip geo-poi-chip--ok">Posizione OK</span>'
             : '<span class="geo-poi-chip">Da completare</span>';
         const isOpen = geoOpenIndex === i || !hasCoords;
-        const mapUrl = geoMapEmbedUrl(loc);
         const mapOpenUrl = geoMapOpenUrl(loc);
-        const mapBlock = hasCoords && mapUrl ? `
-            <div class="geo-map-preview" aria-label="Mappa POI ${esc(title)}">
-                <iframe src="${mapUrl}" loading="lazy" title="Mappa POI ${esc(title)}"></iframe>
-                <span class="geo-map-radius-ring" aria-hidden="true"></span>
-                <span class="geo-map-badge">Raggio ${radius} m</span>
-            </div>
-            <div style="display:flex;justify-content:flex-end;margin:-6px 0 10px;">
-                <a href="${mapOpenUrl}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none;">Apri mappa</a>
-            </div>
-        ` : '';
         const addrBlock = hasCoords && hasLabel ? `
             <div style="padding:10px 12px;border-radius:8px;background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.3);margin-bottom:10px;">
                 <div style="font-size:11px;color:var(--text2);">Indirizzo (OpenStreetMap)</div>
                 <div style="font-weight:600;font-size:13px;margin-top:4px;line-height:1.4;">${esc(String(loc.address).trim())}</div>
-                <button type="button" class="btn small sec" onclick="clearGeoAddress(${i})" style="margin-top:8px;">Cambia indirizzo</button>
+                <div style="display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+                    <button type="button" class="btn small sec" onclick="clearGeoAddress(${i})">Cambia indirizzo</button>
+                    ${mapOpenUrl ? `<a href="${mapOpenUrl}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none;">Verifica sulla mappa ↗</a>` : ''}
+                </div>
             </div>
         ` : hasCoords ? `
             <p style="font-size:12px;color:var(--text2);margin:0 0 8px;">Posizione impostata; aggiungi la via con il pulsante sotto o cambia indirizzo.</p>
@@ -8743,11 +8744,10 @@ function renderGeoLocations() {
                 <label class="form-label">Cerca indirizzo (via, città, luogo)</label>
                 <input type="text" placeholder="es. Via Torino 10, Milano" autocomplete="off" oninput="onGeoSearchInput(${i}, this.value)">
                 <div id="geoSuggest_${i}" class="geo-suggest-box"></div>
-                <p style="font-size:11px;color:var(--text2);margin:6px 0 0;">Dati pubblici OpenStreetMap. Clicca un risultato per fissare il punto.</p>
+                <p style="font-size:11px;color:var(--text2);margin:6px 0 0;">Digita via, civico e città (es. Via Torino 10, Milano), poi clicca un risultato per fissare il punto.</p>
             </div>
         `;
         const coordsDetails = hasCoords ? `
-            ${mapBlock}
             <details style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:rgba(255,255,255,.02);">
                 <summary style="cursor:pointer;font-size:12px;color:var(--text2);">Coordinate (back-office) — lat/lon usati dal pass</summary>
                 <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
@@ -8773,7 +8773,7 @@ function renderGeoLocations() {
                     </div>
                     <div class="geo-poi-summary-meta">
                         <span class="geo-poi-summary-main">${esc(summaryText)}</span>
-                        <span>${radius} m</span>
+                        <button type="button" onclick="event.preventDefault();event.stopPropagation();focusGeoRadius();" style="background:none;border:none;padding:0;cursor:pointer;color:var(--accent);font-size:inherit;" title="Il raggio è unico per tutto il pass Apple — clicca per modificarlo">Raggio ${radius} m ✎</button>
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;">

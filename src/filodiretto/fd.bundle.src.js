@@ -10537,6 +10537,13 @@
     } catch (e) {
       console.warn('[fd-push] loadTestPasses failed', e);
       sel.innerHTML = '<option value="">— Lista pass non disponibile —</option>';
+    } finally {
+      // Stesse opzioni anche nel pannello programmata.
+      var schedSel = document.getElementById('fdSchedTestPass');
+      if (schedSel) {
+        schedSel.innerHTML = sel.innerHTML;
+        schedSel.value = sel.value;
+      }
     }
   }
 
@@ -10809,6 +10816,98 @@
     if (sendBtn) card.insertBefore(block, sendBtn);
     else card.appendChild(block);
     document.getElementById('fdPushTestBtn').addEventListener('click', sendTestPush);
+  }
+
+  function buildSchedTestBlock() {
+    if (document.getElementById('fdSchedTestBlock')) return;
+    var card = document.querySelector('#pushPanel_scheduled .push-card');
+    if (!card) return;
+    var block = document.createElement('div');
+    block.id = 'fdSchedTestBlock';
+    block.className = 'fd-push-test';
+    block.innerHTML =
+      '<label class="form-label" for="fdSchedTestPass">Dispositivo di prova</label>' +
+      '<p class="form-hint" style="margin:0 0 8px">Invia subito il contenuto di questa programmata al solo pass di prova, per verificarla prima della pianificazione.</p>' +
+      '<div class="fd-push-test__row">' +
+      '<select id="fdSchedTestPass" aria-label="Pass di prova"></select>' +
+      '<button type="button" class="fd-btn fd-btn--secondary" id="fdSchedTestBtn">Invia test ora</button>' +
+      '</div>';
+    var scheduleBtn = card.querySelector('button[onclick*="createScheduledPush"]');
+    if (scheduleBtn) card.insertBefore(block, scheduleBtn);
+    else card.appendChild(block);
+    document.getElementById('fdSchedTestBtn').addEventListener('click', sendSchedTestPush);
+  }
+
+  // Test della programmata: stesso motore dell'invio immediato (POST /push/send
+  // con test_pass_id) ma con i campi della form programmata.
+  async function sendSchedTestPush() {
+    if (!syncBrandIdForPush()) {
+      if (typeof toast === 'function') toast('Seleziona un brand');
+      return;
+    }
+    var passId = document.getElementById('fdSchedTestPass')?.value;
+    if (!passId) {
+      if (typeof toast === 'function') toast('Seleziona un dispositivo di prova');
+      return;
+    }
+    var screenAlert = (document.getElementById('schedScreenAlert')?.value || '').trim();
+    if (!screenAlert) {
+      if (typeof window.setPushFieldError === 'function') {
+        window.setPushFieldError('schedScreenAlert', 'Inserisci il testo della notifica Wallet (lock screen)');
+      } else if (typeof toast === 'function') toast('Compila la notifica lock screen');
+      return;
+    }
+    if (screenAlert.length > SCREEN_ALERT_MAX) {
+      if (typeof window.setPushFieldError === 'function') {
+        window.setPushFieldError('schedScreenAlert', 'Notifica lock screen max ' + SCREEN_ALERT_MAX + ' caratteri');
+      }
+      return;
+    }
+    var title = (document.getElementById('schedTitle')?.value || '').trim() || screenAlert;
+    var message = (document.getElementById('schedMessage')?.value || '').trim() || screenAlert;
+    var body = {
+      brand_id: syncBrandIdForPush(),
+      title: title.slice(0, TITLE_MAX),
+      message: message.slice(0, MESSAGE_MAX),
+      screen_alert: screenAlert,
+      update_pass: true,
+      channel: document.getElementById('schedChannel')?.value || 'all',
+      test_pass_id: passId
+    };
+    var backDetails = (document.getElementById('schedBackDetails')?.value || '').trim();
+    if (backDetails) body.back_details = backDetails;
+    var linkUrl = (document.getElementById('schedPassLinkUrl')?.value || '').trim();
+    if (linkUrl) {
+      body.include_pass_link = true;
+      body.pass_link_url = linkUrl;
+      body.pass_link_label = (document.getElementById('schedPassLinkLabel')?.value || '').trim();
+    }
+    var btn = document.getElementById('fdSchedTestBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Invio prova…';
+    }
+    try {
+      var res = await fetch(getApiBase() + '/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(typeof getAuthHeaders === 'function' ? getAuthHeaders() : {}) },
+        body: JSON.stringify(body)
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || data.error) {
+        if (typeof toast === 'function') toast('Errore invio prova: ' + (data.error || res.status));
+        return;
+      }
+      localStorage.setItem(TEST_PASS_KEY, passId);
+      if (typeof toast === 'function') toast('Prova inviata al dispositivo di test');
+    } catch (err) {
+      if (typeof toast === 'function') toast('Errore invio prova: ' + (err.message || err));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Invia test ora';
+      }
+    }
   }
 
   var fdModalOpeners = Object.create(null);
@@ -11327,6 +11426,7 @@
 
     buildChannelSegmented();
     buildTestBlock();
+    buildSchedTestBlock();
     wrapCharField('pushScreenAlert', SCREEN_ALERT_MAX);
     wrapCharField('pushTitle', TITLE_MAX);
     wrapCharField('pushMessage', MESSAGE_MAX);
