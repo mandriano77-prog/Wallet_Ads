@@ -1964,6 +1964,11 @@
                         <div style="margin:10px 0 14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-subtle);font-size:12px;line-height:1.45;color:var(--text2);">
                             Dopo aver aggiunto o modificato un POI premi <strong>Salva e aggiorna pass</strong>. Apple aggiorna il pass via APNs e usa il testo quando propone il pass vicino al POI; Google aggiorna le merchant location e invia anche il messaggio Wallet ai pass salvati.
                         </div>
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label class="form-label" for="geoMaxDistance">Raggio di rilevamento (metri) — standard 100</label>
+                            <input type="number" id="geoMaxDistance" value="100" min="100" max="5000" step="100" style="width:120px;" onchange="this.value=clampGeoRadius(this.value);renderGeoLocations()" oninput="renderGeoLocations()">
+                            <p class="form-hint" style="margin:4px 0 0;font-size:11px;color:var(--text2);">Un solo raggio per tutto il pass Apple Wallet (limite piattaforma, 100–5000 m), uguale per tutti i POI. Google decide autonomamente distanza e tempi.</p>
+                        </div>
                         <div id="geoLocationsList"></div>
                         <div id="geoEmptyMsg" style="padding:20px;text-align:center;color:var(--text2);font-size:13px;border:1px dashed var(--border);border-radius:8px;">
                             Nessun punto di prossimità configurato. Clicca "+ Aggiungi POI" per iniziare.
@@ -8504,12 +8509,16 @@ function geoHasValidCoords(loc) {
 function clampGeoRadius(value) {
     const n = parseInt(value, 10);
     if (Number.isFinite(n) && n >= 100) return Math.min(n, 5000);
-    return 500;
+    return 100;
+}
+
+function getGeoMaxDistanceValue() {
+    return clampGeoRadius(document.getElementById('geoMaxDistance')?.value);
 }
 
 function addGeoLocation() {
     if (geoLocations.length >= GEO_MAX_POI) return alert(`Massimo ${GEO_MAX_POI} POI per pass (limite Apple Wallet)`);
-    geoLocations.push({ name: '', latitude: '', longitude: '', radius: 500, relevantText: '', address: '' });
+    geoLocations.push({ name: '', latitude: '', longitude: '', relevantText: '', address: '' });
     geoOpenIndex = geoLocations.length - 1;
     renderGeoLocations();
 }
@@ -8688,10 +8697,11 @@ function renderGeoLocations() {
     }
     empty.style.display = 'none';
     const latVal = (v) => (v === '' || v === undefined || v === null ? '' : v);
+    const globalRadius = getGeoMaxDistanceValue();
     container.innerHTML = geoLocations.map((loc, i) => {
         const hasCoords = geoHasValidCoords(loc);
         const hasLabel = loc.address && String(loc.address).trim();
-        const radius = clampGeoRadius(loc.radius);
+        const radius = globalRadius;
         const title = String(loc.name || '').trim() || `POI #${i + 1}`;
         const summaryText = hasLabel ? String(loc.address).trim() : 'Indirizzo da selezionare';
         const statusChip = hasCoords
@@ -8757,16 +8767,9 @@ function renderGeoLocations() {
                 </div>
             </summary>
             <div class="geo-poi-body">
-                <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                    <div class="form-group" style="flex:2;min-width:180px;margin-bottom:10px;">
-                        <label class="form-label">Nome interno (opzionale)</label>
-                        <input type="text" value="${esc(loc.name)}" onchange="updateGeoField(${i},'name',this.value);renderGeoLocations();" placeholder="es. Sede centro">
-                    </div>
-                    <div class="form-group" style="flex:1;min-width:140px;margin-bottom:10px;">
-                        <label class="form-label">Raggio (metri)</label>
-                        <input type="number" min="100" max="5000" step="100" value="${radius}" onchange="updateGeoField(${i},'radius',clampGeoRadius(this.value));renderGeoLocations();">
-                        <p class="form-hint" style="margin:4px 0 0;font-size:10px;color:var(--text2);">Apple applica al pass il raggio più grande tra i POI (limite: un solo raggio per pass); Google decide autonomamente.</p>
-                    </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label">Nome interno (opzionale)</label>
+                    <input type="text" value="${esc(loc.name)}" onchange="updateGeoField(${i},'name',this.value);renderGeoLocations();" placeholder="es. Sede centro">
                 </div>
                 ${addrBlock}
                 ${coordsDetails}
@@ -8808,7 +8811,11 @@ async function loadGeofencing() {
             ...loc,
             address: loc.address || ''
         }));
-        geoLocations = geoLocations.map((loc) => ({ ...loc, radius: clampGeoRadius(loc.radius) }));
+        const geoMaxEl = document.getElementById('geoMaxDistance');
+        if (geoMaxEl) {
+            const loadedMax = parseInt(data.maxDistance, 10);
+            geoMaxEl.value = (Number.isFinite(loadedMax) && loadedMax >= 100) ? Math.min(loadedMax, 5000) : 100;
+        }
         const geoChannelEl = document.getElementById('geoChannel');
         if (geoChannelEl) geoChannelEl.value = 'all';
         renderGeoLocations();
@@ -8830,9 +8837,9 @@ async function saveGeofencing() {
         if (!loc.relevantText || !String(loc.relevantText).trim()) return alert(`POI #${i+1}: inserisci il messaggio vicino al POI`);
     }
     const channel = 'all';
-    const locationsPayload = geoLocations.map((loc) => ({ ...loc, radius: clampGeoRadius(loc.radius) }));
-    // Apple ha un solo maxDistance per pass: usa il raggio più grande tra i POI.
-    const maxDistance = locationsPayload.reduce((max, loc) => Math.max(max, loc.radius), 0) || 500;
+    // Raggio unico per tutto il pass (standard 100 m), uguale per tutti i POI.
+    const maxDistance = getGeoMaxDistanceValue();
+    const locationsPayload = geoLocations.map((loc) => ({ ...loc, radius: maxDistance }));
     const statusEl = document.getElementById('geoSaveStatus');
     const btn = document.getElementById('geoSaveBtn');
     const topBtn = document.getElementById('geoSaveBtnTop');

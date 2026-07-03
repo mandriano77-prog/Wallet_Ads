@@ -55,7 +55,7 @@ function mergeGeofenceLocationSources(brandLocations, hubLocations, limit = APPL
 }
 
 function resolveEffectiveMaxDistanceM(brandConfig = {}) {
-  let maxRadius = 500;
+  let maxRadius = 100; // standard: 100 m (decisione proprietario, luglio 2026)
   const locs = brandConfig.locations;
   if (Array.isArray(locs)) {
     for (const loc of locs) {

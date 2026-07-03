@@ -2861,7 +2861,7 @@ router.put('/brands/:id/geofencing', async (req, res) => {
         longitude,
         relevantText: loc.relevantText || '',
         name: loc.name || '',
-        radius: parseInt(loc.radius) || 500,
+        radius: parseInt(loc.radius) || 100,
         address: typeof loc.address === 'string' ? loc.address.slice(0, 500) : ''
       };
     });

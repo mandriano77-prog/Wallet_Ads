@@ -438,8 +438,8 @@ test('Geofencing POIs render as compact list with quota counter and per-POI radi
   // Mappa embed rimossa (rumore); verifica esterna su Google Maps.
   assert.doesNotMatch(dashboard, /openstreetmap\.org\/export\/embed\.html/);
   assert.match(dashboard, /google\.com\/maps\/search/);
-  // Raggio per singolo POI (Apple applica comunque il più grande al pass).
-  assert.match(dashboard, /updateGeoField\(\$\{i\},'radius',clampGeoRadius\(this\.value\)\)/);
+  // Raggio unico per tutto il pass, standard 100 m, modificabile.
+  assert.match(dashboard, /id="geoMaxDistance" value="100"/);
   assert.match(dashboard, /Raggio \$\{radius\} m/);
   assert.match(dashboard, /te ne mancano/);
   // Fisarmonica chiusa dopo il salvataggio.
