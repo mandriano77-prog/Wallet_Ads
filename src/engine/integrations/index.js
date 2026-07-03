@@ -9,6 +9,7 @@
 const ADAPTERS = {
   edenred: require('./edenred'),
   pellegrini: require('./pellegrini'),
+  satispay: require('./satispay'),
 };
 
 /** Categorie note per raggruppare le card nel portale. */

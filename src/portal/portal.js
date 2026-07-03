@@ -659,10 +659,20 @@
     host.innerHTML = groups.map(function (g) {
       const cards = g.items.map(function (it) {
         const st = extraStatusLabel(it.status);
+        const cur = it.data.currency || 'EUR';
         const amount = it.data && (it.data.loaded_amount != null ? it.data.loaded_amount : it.data.balance);
-        const balance = amount != null
-          ? '<div class="extra-balance">' + esc(formatMoney(amount)) + ' ' + esc(it.data.currency || 'EUR') + '</div>'
-          : '';
+        let balance = '';
+        if (amount != null) {
+          const period = it.data.current_period ? '<span class="extra-period">' + esc(it.data.current_period) + '</span>' : '';
+          balance = '<div class="extra-balance">' + esc(formatMoney(amount)) + ' ' + esc(cur) + period + '</div>';
+        }
+        // Storico mensile (buoni caricati mese per mese).
+        let months = '';
+        if (Array.isArray(it.data.months) && it.data.months.length > 1) {
+          months = '<ul class="extra-months">' + it.data.months.slice(0, 6).map(function (mo) {
+            return '<li><span>' + esc(mo.label || mo.period) + '</span><strong>' + esc(formatMoney(mo.amount)) + ' ' + esc(cur) + '</strong></li>';
+          }).join('') + '</ul>';
+        }
         // Link personale del dipendente (caricato dall'azienda) > deeplink generico.
         const personalUrl = (it.data && it.data.personal_url) || (it.mode === 'deeplink' ? it.deeplink_url : null);
         let action = '';
@@ -677,7 +687,7 @@
         return '<div class="extra-card">'
           + logo
           + '<div class="extra-card__body"><div class="extra-card__label">' + esc(it.label) + '</div>'
-          + '<span class="extra-status extra-status--' + st.cls + '">' + st.text + '</span>' + balance + '</div>'
+          + '<span class="extra-status extra-status--' + st.cls + '">' + st.text + '</span>' + balance + months + '</div>'
           + '<div class="extra-card__action">' + action + '</div>'
           + '</div>';
       }).join('');

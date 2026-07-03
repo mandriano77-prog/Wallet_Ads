@@ -68,6 +68,27 @@ async function deleteMemberIntegration(memberId, type) {
  * rows: [{ matricola, amount?, currency?, personal_url?, expires_at? }].
  * Match sui members del brand; ritorna { updated, not_found: [matricola...] }.
  */
+const MONTHS_IT = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+
+/** Normalizza un periodo in { period: 'YYYY-MM', label: 'Mese YYYY' }. Accetta
+ *  'YYYY-MM', 'MM/YYYY', 'Luglio 2026'. Vuoto → mese corrente. */
+function normalizePeriod(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  let y, m;
+  let match;
+  if (!s) { const d = new Date(); y = d.getFullYear(); m = d.getMonth() + 1; }
+  else if ((match = s.match(/^(\d{4})[-/](\d{1,2})$/))) { y = +match[1]; m = +match[2]; }
+  else if ((match = s.match(/^(\d{1,2})[-/](\d{4})$/))) { m = +match[1]; y = +match[2]; }
+  else if ((match = s.match(/^([a-zàèéìòù]+)\s+(\d{4})$/i))) {
+    const idx = MONTHS_IT.indexOf(match[1].toLowerCase());
+    if (idx < 0) return null; m = idx + 1; y = +match[2];
+  } else return null;
+  if (!(m >= 1 && m <= 12) || !(y >= 2000 && y <= 2100)) return null;
+  const period = y + '-' + String(m).padStart(2, '0');
+  const label = MONTHS_IT[m - 1].charAt(0).toUpperCase() + MONTHS_IT[m - 1].slice(1) + ' ' + y;
+  return { period, label };
+}
+
 async function bulkUpsertByEmployeeId(brandId, type, rows) {
   const pool = getPool();
   let updated = 0;
@@ -81,11 +102,29 @@ async function bulkUpsertByEmployeeId(brandId, type, rows) {
     );
     const member = m.rows[0];
     if (!member) { notFound.push(matricola); continue; }
-    const data = {};
-    if (row.amount != null && row.amount !== '') data.loaded_amount = Number(row.amount);
-    data.currency = row.currency || 'EUR';
+
+    // Merge nello stato esistente: lo storico mensile (data.months) va accumulato,
+    // aggiornando il mese se già presente. currency/personal_url sono a livello top.
+    const existing = await getMemberIntegration(member.id, type);
+    const data = (existing && existing.data && typeof existing.data === 'object') ? { ...existing.data } : {};
+    data.currency = row.currency || data.currency || 'EUR';
     if (row.personal_url) data.personal_url = String(row.personal_url).slice(0, 1000);
-    if (row.expires_at) data.expires_at = row.expires_at;
+
+    if (row.amount != null && row.amount !== '') {
+      const amount = Number(row.amount);
+      const period = normalizePeriod(row.period);
+      if (period) {
+        const months = Array.isArray(data.months) ? data.months.filter((mo) => mo.period !== period.period) : [];
+        months.push({ period: period.period, label: period.label, amount });
+        months.sort((a, b) => (a.period < b.period ? 1 : -1)); // più recente prima
+        data.months = months.slice(0, 24); // max 2 anni di storico
+        data.loaded_amount = months[0].amount; // il mese più recente in evidenza
+        data.current_period = months[0].label;
+      } else {
+        data.loaded_amount = amount; // nessun periodo → valore singolo
+      }
+    }
+
     await upsertMemberIntegration({
       member_id: member.id, brand_id: brandId, type,
       status: 'connected', data,
@@ -97,6 +136,7 @@ async function bulkUpsertByEmployeeId(brandId, type, rows) {
 
 module.exports = {
   bulkUpsertByEmployeeId,
+  normalizePeriod,
   listMemberIntegrations,
   getMemberIntegration,
   upsertMemberIntegration,

@@ -62,3 +62,18 @@ test('portale mostra caricato + link personale (shape dati)', () => {
   assert.equal(data.loaded_amount, 176);
   assert.ok(/^https:/.test(data.personal_url));
 });
+
+test('Satispay registrato come provider', () => {
+  assert.ok(getAdapter('satispay'));
+  assert.equal(getAdapter('satispay').defaultCategory, 'buoni_pasto');
+});
+
+test('normalizePeriod: formati mese vari', () => {
+  const { normalizePeriod } = require('../src/db/integrations');
+  assert.deepEqual(normalizePeriod('2026-07'), { period: '2026-07', label: 'Luglio 2026' });
+  assert.deepEqual(normalizePeriod('07/2026'), { period: '2026-07', label: 'Luglio 2026' });
+  assert.deepEqual(normalizePeriod('Luglio 2026'), { period: '2026-07', label: 'Luglio 2026' });
+  assert.equal(normalizePeriod('non-una-data'), null);
+  const cur = normalizePeriod('');
+  assert.match(cur.period, /^\d{4}-\d{2}$/); // vuoto → mese corrente
+});

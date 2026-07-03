@@ -863,3 +863,8 @@
 .extra-status--muted { background: var(--bg-subtle, #f1f5f9); color: var(--text-secondary); }
 .extra-card__action .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
 @media (max-width: 480px) { .extra-grid { grid-template-columns: 1fr; } }
+
+.extra-period { display: block; font-size: 11px; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
+.extra-months { list-style: none; margin: 8px 0 0; padding: 0; }
+.extra-months li { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); padding: 2px 0; border-top: 1px solid var(--border-default); }
+.extra-months li strong { color: var(--text-primary); }
