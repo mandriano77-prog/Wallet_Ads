@@ -85,6 +85,9 @@ test.describe('dashboard: push immediata', () => {
     // Layout HR: il campo obbligatorio visibile è il testo notifica Wallet
     // (screen_alert, max 178); titolo/messaggio strip compaiono solo con strip attiva.
     await page.fill('#pushScreenAlert', 'PROMO E2E: test invio end-to-end dalla suite Playwright');
+    // L'anteprima inline "Notifica completa" compare sotto il campo mentre si scrive.
+    await expect(page.locator('#pushScreenAlertFullPreview')).toBeVisible();
+    await expect(page.locator('#pushScreenAlertFullPreview')).toContainText('PROMO E2E');
     await page.fill('#pushBackDetails', 'Dettagli retro pass generati dal test E2E.');
     await page.click('#pushSendBtn');
 

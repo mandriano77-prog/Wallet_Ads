@@ -137,6 +137,35 @@
     return (message || title).slice(0, SCREEN_ALERT_MAX);
   }
 
+  // Anteprima inline sotto il campo notifica: testo manuale + coda automatica
+  // (didascalia header del template, iOS la accoda via %@ — vedi employee-pass.js).
+  // La didascalia arriva da passPreviewCache.header (motore reale del pass).
+  function renderScreenAlertInlinePreview(inputId, previewId) {
+    var el = document.getElementById(previewId);
+    if (!el) return;
+    var manual = (document.getElementById(inputId)?.value || '').trim();
+    var caption = String(passPreviewCache?.header?.value || '').trim();
+    if (!manual) {
+      el.hidden = true;
+      el.innerHTML = '';
+      return;
+    }
+    var html = '<span style="color:var(--text2);">Notifica completa:</span> \u201c<strong>' + esc(manual) + '</strong>';
+    if (caption) {
+      html += '<span style="color:var(--text2);"> \u00b7 ' + esc(caption) + '</span>\u201d ' +
+        '<span style="color:var(--text2);font-style:italic;">(la parte dopo \u00b7 \u00e8 la didascalia del template, aggiunta automatica)</span>';
+    } else {
+      html += '\u201d';
+    }
+    el.hidden = false;
+    el.innerHTML = html;
+  }
+
+  function syncScreenAlertInlinePreviews() {
+    renderScreenAlertInlinePreview('pushScreenAlert', 'pushScreenAlertFullPreview');
+    renderScreenAlertInlinePreview('schedScreenAlert', 'schedScreenAlertFullPreview');
+  }
+
   function getPushScreenAlertValue() {
     return (document.getElementById('pushScreenAlert')?.value || '').trim();
   }
@@ -169,6 +198,7 @@
     document.querySelectorAll('[data-fd-push-preview-lock-body]').forEach(function (el) {
       el.textContent = lockBody;
     });
+    syncScreenAlertInlinePreviews();
     syncPassPreview();
   }
 
@@ -1519,6 +1549,11 @@
     if (brandSel && brandSel.dataset.fdPushPreviewBound !== '1') {
       brandSel.dataset.fdPushPreviewBound = '1';
       brandSel.addEventListener('change', syncPreview);
+    }
+    var schedAlertEl = document.getElementById('schedScreenAlert');
+    if (schedAlertEl && !schedAlertEl.dataset.fdInlinePreviewWired) {
+      schedAlertEl.dataset.fdInlinePreviewWired = '1';
+      schedAlertEl.addEventListener('input', syncScreenAlertInlinePreviews);
     }
     ['pushScreenAlert', 'pushTitle', 'pushMessage'].forEach(function (id) {
       var el = document.getElementById(id);
