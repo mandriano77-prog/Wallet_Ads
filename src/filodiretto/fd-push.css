@@ -170,17 +170,34 @@ html[data-app='filodiretto'] #pushPanel_immediate .fd-push-form-col .push-card {
   margin-top: 0;
 }
 
+/* Anteprima live: nascosta sotto i 1280px (form-first), visibile e sticky
+   sui monitor larghi — il manager vede la notifica e il pass mentre scrive. */
 html[data-app='filodiretto'] #pushPanel_immediate .fd-push-aside-col {
-  display: none !important;
+  display: none;
 }
 
 html[data-app='filodiretto'] #pushPanel_immediate .fd-push-history-wrap {
   grid-column: 1 / -1;
 }
 
-/* Preview hidden: the live pass preview is too intrusive in the send form. */
 html[data-app='filodiretto'] #pushPanel_immediate.fd-push-panel--enhanced > aside.fd-push-preview {
-  display: none !important;
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  html[data-app='filodiretto'] #pushPanel_immediate.fd-push-panel--enhanced {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+  html[data-app='filodiretto'] #pushPanel_immediate .fd-push-aside-col {
+    display: block;
+    position: sticky;
+    top: var(--fd-space-4);
+    align-self: start;
+  }
+  html[data-app='filodiretto'] #pushPanel_immediate .fd-push-aside-col aside.fd-push-preview,
+  html[data-app='filodiretto'] #pushPanel_immediate.fd-push-panel--enhanced > aside.fd-push-preview {
+    display: block;
+  }
 }
 
 html[data-app='filodiretto'] #pushPanel_immediate.fd-push-panel--enhanced > .sec-title,

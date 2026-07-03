@@ -741,7 +741,9 @@
   }
 
   /* === MOBILE === */
-  @media (max-width: 760px) {
+  /* Tab-bar fino al tablet portrait: il portale è un prodotto mobile-first,
+     la sidebar 240px ha senso solo da iPad landscape in su. */
+  @media (max-width: 900px) {
     .shell { grid-template-columns: 1fr; }
     .sidebar {
       position: fixed;

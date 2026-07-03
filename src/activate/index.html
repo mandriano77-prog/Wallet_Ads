@@ -95,6 +95,16 @@
     }
     a { color: var(--brand-accent); }
     a:hover { color: var(--brand-accent-hover); }
+    .tpl-cards { display: grid; gap: 10px; margin-top: 6px; }
+    .tpl-card { display: flex; align-items: center; gap: 12px; padding: 14px; border: 2px solid var(--card-border, #e2e8f0); border-radius: 12px; cursor: pointer; transition: border-color .15s, background .15s; background: #fff; }
+    .tpl-card:hover { border-color: var(--brand-accent, #8B5CF6); }
+    .tpl-card.selected { border-color: var(--brand-accent, #8B5CF6); background: color-mix(in srgb, var(--brand-accent, #8B5CF6) 6%, #fff); }
+    .tpl-card input { position: absolute; opacity: 0; pointer-events: none; }
+    .tpl-card__swatch { width: 44px; height: 44px; border-radius: 9px; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+    .tpl-card__name { font-weight: 600; font-size: 15px; color: #0f172a; }
+    .tpl-card__radio { margin-left: auto; width: 20px; height: 20px; border-radius: 999px; border: 2px solid #cbd5e1; flex: 0 0 auto; position: relative; }
+    .tpl-card.selected .tpl-card__radio { border-color: var(--brand-accent, #8B5CF6); }
+    .tpl-card.selected .tpl-card__radio::after { content: ''; position: absolute; inset: 3px; border-radius: 999px; background: var(--brand-accent, #8B5CF6); }
   </style>
 </head>
 <body>
@@ -111,8 +121,9 @@
       <h1 id="brandTitle">Attivazione pass</h1>
       <p class="meta" id="memberLine"></p>
       <div id="tplWrap" class="hidden">
-        <label for="template">Template pass</label>
-        <select id="template"></select>
+        <label>Scegli il tuo pass</label>
+        <div id="templateCards" role="radiogroup" aria-label="Template pass"></div>
+        <select id="template" class="hidden" aria-hidden="true"></select>
       </div>
       <div class="privacy-required">
         <label for="privacy-accepted">
@@ -244,12 +255,28 @@
       if (data.templates && data.templates.length > 1) {
         document.getElementById('tplWrap').classList.remove('hidden');
         const sel = document.getElementById('template');
-        data.templates.forEach((t) => {
+        const cards = document.getElementById('templateCards');
+        cards.className = 'tpl-cards';
+        const accent = getComputedStyle(document.documentElement).getPropertyValue('--brand-accent').trim() || '#8B5CF6';
+        data.templates.forEach((t, i) => {
           const o = document.createElement('option');
-          o.value = t.id;
-          o.textContent = t.name || t.id;
+          o.value = t.id; o.textContent = t.name || t.id;
           sel.appendChild(o);
+          const card = document.createElement('label');
+          card.className = 'tpl-card' + (i === 0 ? ' selected' : '');
+          card.innerHTML =
+            '<input type="radio" name="tpl" value="' + t.id + '"' + (i === 0 ? ' checked' : '') + '>' +
+            '<span class="tpl-card__swatch" style="background:' + accent + '"></span>' +
+            '<span class="tpl-card__name">' + (t.name || t.id).replace(/[<>&]/g, '') + '</span>' +
+            '<span class="tpl-card__radio" aria-hidden="true"></span>';
+          card.querySelector('input').addEventListener('change', () => {
+            sel.value = t.id;
+            cards.querySelectorAll('.tpl-card').forEach((c) => c.classList.remove('selected'));
+            card.classList.add('selected');
+          });
+          cards.appendChild(card);
         });
+        sel.value = data.templates[0].id;
       }
     }
 

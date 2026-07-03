@@ -377,26 +377,37 @@
 
   function renderKpiGrid(ctx, compact) {
     var gridClass = 'fd-stat-grid fd-home-kpi-grid' + (compact ? ' fd-home-kpi-grid--compact' : ' fd-home-kpi-grid--primary');
+    // KPI HR-first: la metrica che conta per un manager è quanti dipendenti
+    // hanno DAVVERO il pass nel wallet, non i numeri assoluti della piattaforma.
+    var employees = Number(ctx.employeeCount) || 0;
+    var installed = Math.min(Number(ctx.walletInstalls) || 0, employees || (Number(ctx.walletInstalls) || 0));
+    var adoptionPct = employees > 0 ? Math.round((installed / employees) * 100) : null;
+    var withoutPass = Math.max(0, employees - (Number(ctx.employeesWithPass) || 0));
+    var adoptionHint = employees > 0
+      ? esc(installed) + ' su ' + esc(employees) + ' dipendenti · Apple ' + esc(ctx.apple) + ' · Google ' + esc(ctx.google) +
+        (ctx.samsung ? ' · Samsung ' + esc(ctx.samsung) : '')
+      : 'Importa i dipendenti per misurare l\u2019adozione';
     return (
       '<div class="' + gridClass + '">' +
+      '<div class="fd-stat-card">' +
+      '<span class="fd-stat-card__label">Adozione Wallet</span>' +
+      '<span class="fd-stat-card__value">' + (adoptionPct == null ? '\u2014' : esc(adoptionPct) + '%') + '</span>' +
+      '<span class="fd-stat-card__hint">' + adoptionHint + '</span>' +
+      '</div>' +
+      '<div class="fd-stat-card">' +
+      '<span class="fd-stat-card__label">Dipendenti</span>' +
+      '<span class="fd-stat-card__value">' + esc(ctx.employeeCount) + '</span>' +
+      '<span class="fd-stat-card__hint">Con pass: ' + esc(ctx.employeesWithPass) +
+      (withoutPass > 0 ? ' · <strong>Da attivare: ' + esc(withoutPass) + '</strong>' : ' · Tutti attivi \u2713') + '</span>' +
+      '</div>' +
       '<div class="fd-stat-card">' +
       '<span class="fd-stat-card__label">Pass totali</span>' +
       '<span class="fd-stat-card__value">' + esc(ctx.totalPasses) + '</span>' +
       '</div>' +
       '<div class="fd-stat-card">' +
-      '<span class="fd-stat-card__label">Installazioni Wallet</span>' +
-      '<span class="fd-stat-card__value">' + esc(ctx.walletInstalls) + '</span>' +
-      '<span class="fd-stat-card__hint">Apple ' + esc(ctx.apple) + ' · Google ' + esc(ctx.google) +
-      (ctx.samsung ? ' · Samsung ' + esc(ctx.samsung) : '') + '</span>' +
-      '</div>' +
-      '<div class="fd-stat-card">' +
       '<span class="fd-stat-card__label">Push inviate</span>' +
       '<span class="fd-stat-card__value">' + esc(ctx.pushCount) + '</span>' +
-      '</div>' +
-      '<div class="fd-stat-card">' +
-      '<span class="fd-stat-card__label">Template pass</span>' +
-      '<span class="fd-stat-card__value">' + esc(ctx.templateCount) + '</span>' +
-      '<span class="fd-stat-card__hint">Dipendenti: ' + esc(ctx.employeeCount) + ' (con pass: ' + esc(ctx.employeesWithPass) + ')</span>' +
+      '<span class="fd-stat-card__hint">Template: ' + esc(ctx.templateCount) + '</span>' +
       '</div>' +
       '</div>'
     );
