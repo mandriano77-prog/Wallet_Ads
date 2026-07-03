@@ -443,6 +443,19 @@ function buildBackSections({ brand, template, instance, member, brandConfig = {}
     }
   }
 
+  // Messaggio geofencing sul retro (sempre presente, senza changeMessage →
+  // aggiornamento silenzioso). Testo fisso configurato nel pannello Geofencing;
+  // Apple non consente un retro diverso per singolo POI.
+  const geoBack = String(brandConfig.geoBackMessage || '').trim();
+  if (geoBack) {
+    sections.push({
+      kind: 'alert',
+      key: 'geo_back_message',
+      label: ' ',
+      body: geoBack.slice(0, 500),
+    });
+  }
+
   if (hubUrl) {
     sections.push({
       kind: 'link',

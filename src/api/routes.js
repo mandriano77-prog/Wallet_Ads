@@ -2836,8 +2836,9 @@ router.get('/brands/:id/geofencing', async (req, res) => {
     });
     res.json({
       locations,
-      maxDistance: brand.config?.maxDistance || 500,
+      maxDistance: brand.config?.maxDistance || 100,
       channel: brand.config?.geofencing_channel || 'all',
+      geo_back_message: brand.config?.geoBackMessage || '',
       diagnostics: {
         passes: passRows.rowCount || 0,
         apple_devices: appleDevices.length,
@@ -2851,7 +2852,7 @@ router.get('/brands/:id/geofencing', async (req, res) => {
 router.put('/brands/:id/geofencing', async (req, res) => {
   try {
     if (!requireOwnedBrandPk(req, res, req.params.id)) return;
-    const { locations, maxDistance, channel = 'all' } = req.body;
+    const { locations, maxDistance, channel = 'all', geo_back_message } = req.body;
     if (!assertPushChannel(channel)) {
       return res.status(400).json({ error: 'channel non valido (apple|google|samsung|all o combinazioni apple,google)' });
     }
@@ -2892,6 +2893,9 @@ router.put('/brands/:id/geofencing', async (req, res) => {
       config.maxDistance = parsedMaxDistance;
     }
     config.geofencing_channel = channel;
+    const geoBackMsg = String(geo_back_message || '').trim().slice(0, 500);
+    if (geoBackMsg) config.geoBackMessage = geoBackMsg;
+    else delete config.geoBackMessage;
     delete config.geofencingFaceMessage;
     delete config.geofencingFaceLabel;
 

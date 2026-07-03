@@ -416,3 +416,33 @@ test('hub-jwt buildHubUrl targets /conv path', () => {
   assert.match(url, /\/conv\?token=tok/);
   assert.match(buildHubAppUrl('tok', 'acme', 'pga'), /\/pga\?token=tok/);
 });
+
+test('Geofencing back message renders as a silent back field (no changeMessage)', () => {
+  const { buildEmployeePass, toApplePass } = require('../src/engine/employee-pass');
+  const ep = buildEmployeePass({
+    brand: { id: 'b1', name: 'Meridia', slug: 'meridia', config: { product_line: 'hr' } },
+    template: { id: 't1', name: 'T', style: {} },
+    instance: { serial_number: 'SN-GEO', field_values: {} },
+    member: { full_name: 'Mario Rossi', department: 'Legal' },
+    brandConfig: { product_line: 'hr', geoBackMessage: 'Passa a trovarci e mostra il tuo pass.' },
+  });
+  const geo = ep.backSections.find((s) => s.key === 'geo_back_message');
+  assert.ok(geo, 'sezione geo_back_message presente quando configurata');
+  assert.equal(geo.body, 'Passa a trovarci e mostra il tuo pass.');
+  const apple = toApplePass(ep);
+  const field = (apple.passStructure.backFields || []).find((f) => f.key === 'geo_back_message');
+  assert.ok(field, 'back field presente nel pass.json');
+  assert.equal(field.changeMessage, undefined, 'back field statico: nessun changeMessage (aggiornamento silenzioso)');
+});
+
+test('Geofencing back message absent when not configured', () => {
+  const { buildEmployeePass } = require('../src/engine/employee-pass');
+  const ep = buildEmployeePass({
+    brand: { id: 'b1', name: 'Meridia', slug: 'meridia', config: { product_line: 'hr' } },
+    template: { id: 't1', name: 'T', style: {} },
+    instance: { serial_number: 'SN-GEO2', field_values: {} },
+    member: { full_name: 'Mario Rossi', department: 'Legal' },
+    brandConfig: { product_line: 'hr' },
+  });
+  assert.ok(!ep.backSections.find((s) => s.key === 'geo_back_message'));
+});

@@ -25,8 +25,8 @@
             var fdLegacyMediaHide = document.createElement('style');
             fdLegacyMediaHide.textContent = "html[data-app='filodiretto'] #media-library #a2wMediaTabs{display:none!important}";
             document.head.appendChild(fdLegacyMediaHide);
-            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260708-geo-silent';
-            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260708-geo-silent';
+            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260708-geo-back';
+            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260708-geo-back';
             var fdCss = ['/filodiretto/tokens.css', '/filodiretto/fd-theme.css', '/filodiretto/fd-typography.css', '/filodiretto/fd-buttons.css', '/filodiretto/fd-components.css', '/filodiretto/fd-header.css', '/filodiretto/fd-layout.css', '/filodiretto/fd-wide-layout.css', '/filodiretto/fd-mobile-gate.css', '/filodiretto/fd-wai.css', '/filodiretto/fd-brand-switcher.css', '/filodiretto/fd-nav.css', '/filodiretto/fd-brand-identity.css', '/filodiretto/fd-brand-scope.css', '/filodiretto/fd-home.css', '/filodiretto/fd-users.css', '/filodiretto/fd-contacts.css', '/filodiretto/fd-media-library.css', '/filodiretto/fd-destructive.css', '/filodiretto/fd-form-dirty.css', '/filodiretto/fd-form-help.css', '/filodiretto/fd-empty-states.css', '/filodiretto/fd-page-states.css', '/filodiretto/fd-danger-zone.css', '/filodiretto/fd-push.css', '/filodiretto/fd-reward-challenge.css', '/filodiretto/fd-analytics.css', '/filodiretto/fd-audiences.css', '/filodiretto/fd-conventions.css', '/filodiretto/fd-pga.css', '/filodiretto/fd-activity-log.css', '/filodiretto/fd-responsive-tables.css'];
             var fdJs = ['/filodiretto/fd-buttons.js', '/filodiretto/fd-header.js', '/filodiretto/fd-layout.js', '/filodiretto/fd-mobile-gate.js', '/filodiretto/fd-wai.js', '/filodiretto/fd-brand-switcher.js', '/filodiretto/fd-icons.js', '/filodiretto/fd-nav.js', '/filodiretto/fd-legacy-campaigns.js', '/filodiretto/fd-hr-copy.js', '/filodiretto/fd-brand-scope.js', '/filodiretto/fd-brand-identity.js', '/filodiretto/fd-brand-pass-flow.js', '/filodiretto/fd-home.js', '/filodiretto/fd-users.js', '/filodiretto/fd-contacts.js', '/filodiretto/fd-media-library.js', '/filodiretto/fd-templates.js', '/filodiretto/fd-passes.js', '/filodiretto/fd-destructive.js', '/filodiretto/fd-form-dirty.js', '/filodiretto/fd-form-help.js', '/filodiretto/fd-form-a11y.js', '/filodiretto/fd-empty-states.js', '/filodiretto/fd-page-states.js', '/filodiretto/fd-danger-zone.js', '/filodiretto/fd-rbac.js', '/filodiretto/fd-push.js', '/filodiretto/fd-reward-challenge.js', '/filodiretto/fd-analytics.js', '/filodiretto/fd-audiences.js', '/filodiretto/fd-conventions.js', '/filodiretto/fd-pga.js', '/filodiretto/fd-pga-engagement.js', '/filodiretto/fd-activity-log.js', '/filodiretto/fd-responsive-tables.js', '/filodiretto/fd-profile.js'];
             var useFdBundle = window.location.search.indexOf('fd_nobundle') === -1;
@@ -1969,6 +1969,11 @@
                             <label class="form-label" for="geoMaxDistance">Raggio di rilevamento (metri) — standard 100</label>
                             <input type="number" id="geoMaxDistance" value="100" min="100" max="5000" step="100" style="width:120px;" onchange="this.value=clampGeoRadius(this.value);renderGeoLocations()" oninput="renderGeoLocations()">
                             <p class="form-hint" style="margin:4px 0 0;font-size:11px;color:var(--text2);">Un solo raggio per tutto il pass Apple Wallet (limite piattaforma, 100–5000 m), uguale per tutti i POI. Google decide autonomamente distanza e tempi.</p>
+                        </div>
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label class="form-label" for="geoBackMessage">Messaggio sul retro del pass (opzionale)</label>
+                            <textarea id="geoBackMessage" rows="2" maxlength="500" placeholder="es. Passa a trovarci e mostra il tuo pass per usufruire delle agevolazioni a te dedicate." style="width:100%;"></textarea>
+                            <p class="form-hint" style="margin:4px 0 0;font-size:11px;color:var(--text2);">Testo fisso mostrato sul retro del pass (la «i»). Utile come istruzione quando il pass compare vicino a una sede. Apple non consente un retro diverso per singolo POI.</p>
                         </div>
                         <div id="geoLocationsList"></div>
                         <div id="geoEmptyMsg" style="padding:20px;text-align:center;color:var(--text2);font-size:13px;border:1px dashed var(--border);border-radius:8px;">
@@ -8823,6 +8828,8 @@ async function loadGeofencing() {
             const loadedMax = parseInt(data.maxDistance, 10);
             geoMaxEl.value = (Number.isFinite(loadedMax) && loadedMax >= 100) ? Math.min(loadedMax, 5000) : 100;
         }
+        const geoBackEl = document.getElementById('geoBackMessage');
+        if (geoBackEl) geoBackEl.value = data.geo_back_message || '';
         const geoChannelEl = document.getElementById('geoChannel');
         if (geoChannelEl) geoChannelEl.value = 'all';
         renderGeoLocations();
@@ -8858,7 +8865,7 @@ async function saveGeofencing() {
         const res = await fetch(`${API}/brands/${brandId}/geofencing`, {
             method: 'PUT',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ locations: locationsPayload, maxDistance, channel })
+            body: JSON.stringify({ locations: locationsPayload, maxDistance, channel, geo_back_message: (document.getElementById('geoBackMessage')?.value || '').trim() })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
