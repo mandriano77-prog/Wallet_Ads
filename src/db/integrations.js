@@ -63,7 +63,40 @@ async function deleteMemberIntegration(memberId, type) {
   );
 }
 
+/**
+ * Import massivo dati integrazione per matricola (employee_id) di un brand.
+ * rows: [{ matricola, amount?, currency?, personal_url?, expires_at? }].
+ * Match sui members del brand; ritorna { updated, not_found: [matricola...] }.
+ */
+async function bulkUpsertByEmployeeId(brandId, type, rows) {
+  const pool = getPool();
+  let updated = 0;
+  const notFound = [];
+  for (const row of rows) {
+    const matricola = String(row.matricola || '').trim();
+    if (!matricola) continue;
+    const m = await pool.query(
+      `SELECT id FROM members WHERE brand_id = $1 AND employee_id = $2 LIMIT 1`,
+      [brandId, matricola]
+    );
+    const member = m.rows[0];
+    if (!member) { notFound.push(matricola); continue; }
+    const data = {};
+    if (row.amount != null && row.amount !== '') data.loaded_amount = Number(row.amount);
+    data.currency = row.currency || 'EUR';
+    if (row.personal_url) data.personal_url = String(row.personal_url).slice(0, 1000);
+    if (row.expires_at) data.expires_at = row.expires_at;
+    await upsertMemberIntegration({
+      member_id: member.id, brand_id: brandId, type,
+      status: 'connected', data,
+    });
+    updated += 1;
+  }
+  return { updated, not_found: notFound };
+}
+
 module.exports = {
+  bulkUpsertByEmployeeId,
   listMemberIntegrations,
   getMemberIntegration,
   upsertMemberIntegration,

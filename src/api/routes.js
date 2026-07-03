@@ -59,6 +59,7 @@ const {
 } = require('../db');
 const { buildGeofenceDiagnostics } = require('../engine/geofencing');
 const { availableProviders, enabledIntegrations, getAdapter } = require('../engine/integrations');
+const { bulkUpsertByEmployeeId } = require('../db/integrations');
 const {
   getPassHoldersInsights,
   countAudienceMembers,
@@ -3013,6 +3014,28 @@ router.put('/brands/:id/integrations', async (req, res) => {
     const config = { ...(brand.config || {}), integrations: clean };
     await updateBrand(req.params.id, { config });
     res.json({ success: true, integrations: clean, enabled: enabledIntegrations(config) });
+  } catch (err) { res.status(err.statusCode || 500).json({ error: err.message }); }
+});
+
+// EXTRA — import massivo dati per dipendente (caricato aziendale + link personale).
+// rows: [{ matricola, amount?, currency?, personal_url?, expires_at? }].
+// Il provider dev'essere già abilitato per il brand.
+router.post('/brands/:id/integrations/:type/import', async (req, res) => {
+  try {
+    if (!requireOwnedBrandPk(req, res, req.params.id)) return;
+    if (!requireWriteAccess(req, res)) return;
+    const type = req.params.type;
+    if (!getAdapter(type)) return res.status(400).json({ error: 'Provider sconosciuto' });
+    const brand = await getBrand(req.params.id);
+    if (!brand) return res.status(404).json({ error: 'Brand non trovato' });
+    const active = Array.isArray(brand.config?.integrations) ? brand.config.integrations : [];
+    if (!active.find((it) => it.type === type && it.enabled)) {
+      return res.status(400).json({ error: 'Abilita prima questo provider nella tab EXTRA' });
+    }
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 20000) : [];
+    if (!rows.length) return res.status(400).json({ error: 'Nessuna riga da importare' });
+    const result = await bulkUpsertByEmployeeId(req.params.id, type, rows);
+    res.json({ success: true, ...result });
   } catch (err) { res.status(err.statusCode || 500).json({ error: err.message }); }
 });
 

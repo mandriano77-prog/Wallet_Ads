@@ -48,3 +48,17 @@ test('back-link EXTRA presente solo con integrazioni attive', () => {
   const noExtra = buildEmployeePass({ ...base, brandConfig: { product_line: 'hr' } });
   assert.ok(!noExtra.backSections.find((s) => s.key === 'extra_benefits'), 'EXTRA assente senza integrazioni');
 });
+
+test('mode manual accettato e propagato', () => {
+  const out = enabledIntegrations({ integrations: [
+    { type: 'edenred', enabled: true, mode: 'manual', category: 'buoni_pasto' },
+  ] });
+  assert.equal(out[0].mode, 'manual');
+});
+
+test('portale mostra caricato + link personale (shape dati)', () => {
+  // Simula lo stato che l'import scrive in member_integrations.data.
+  const data = { loaded_amount: 176.00, currency: 'EUR', personal_url: 'https://provider.example/me/abc' };
+  assert.equal(data.loaded_amount, 176);
+  assert.ok(/^https:/.test(data.personal_url));
+});

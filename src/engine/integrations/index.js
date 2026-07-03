@@ -37,7 +37,7 @@ function enabledIntegrations(brandConfig = {}) {
         category,
         category_label: CATEGORIES[category],
         logo_url: it.logo_url || null,
-        mode: it.mode === 'deeplink' ? 'deeplink' : 'api',
+        mode: ['manual', 'deeplink', 'api'].includes(it.mode) ? it.mode : 'api',
         deeplink_url: it.deeplink_url || null,
       };
     });

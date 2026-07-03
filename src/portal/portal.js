@@ -80,6 +80,12 @@
       .replace(/"/g, '&quot;');
   }
 
+  function formatMoney(v) {
+    const n = Number(v);
+    if (!isFinite(n)) return String(v);
+    return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   function fv(...keys) {
     const f = profile?.field_values || {};
     for (let i = 0; i < keys.length; i++) {
@@ -653,12 +659,15 @@
     host.innerHTML = groups.map(function (g) {
       const cards = g.items.map(function (it) {
         const st = extraStatusLabel(it.status);
-        const balance = it.data && it.data.balance != null
-          ? '<div class="extra-balance">' + esc(String(it.data.balance)) + ' ' + esc(it.data.currency || '') + '</div>'
+        const amount = it.data && (it.data.loaded_amount != null ? it.data.loaded_amount : it.data.balance);
+        const balance = amount != null
+          ? '<div class="extra-balance">' + esc(formatMoney(amount)) + ' ' + esc(it.data.currency || 'EUR') + '</div>'
           : '';
+        // Link personale del dipendente (caricato dall'azienda) > deeplink generico.
+        const personalUrl = (it.data && it.data.personal_url) || (it.mode === 'deeplink' ? it.deeplink_url : null);
         let action = '';
-        if (it.mode === 'deeplink' && it.deeplink_url) {
-          action = '<a class="btn btn-sm" href="' + esc(it.deeplink_url) + '" target="_blank" rel="noopener">Apri</a>';
+        if (personalUrl) {
+          action = '<a class="btn btn-sm" href="' + esc(personalUrl) + '" target="_blank" rel="noopener">Vai al mio conto</a>';
         } else if (it.status !== 'connected') {
           action = '<button type="button" class="btn btn-sm" disabled title="Presto disponibile">Collega</button>';
         }

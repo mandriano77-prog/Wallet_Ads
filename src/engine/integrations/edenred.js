@@ -9,6 +9,7 @@ module.exports = {
   type: 'edenred',
   defaultLabel: 'Ticket Restaurant',
   defaultCategory: 'buoni_pasto',
+  defaultMode: 'manual',
 
   // Ritorna lo stato mostrato al dipendente. Fase 1: sempre da collegare.
   async fetchState(/* member, integrationConfig, connection */) {
