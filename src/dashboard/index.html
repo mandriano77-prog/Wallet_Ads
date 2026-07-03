@@ -3057,7 +3057,7 @@
                     </div>
                     <div id="analyticsTopCampaigns"></div>
                 </div>
-                <div class="sec-title" style="font-size:18px;">Performance per campagna</div>
+                <div class="sec-title" id="campaignAnalyticsTitle" style="font-size:18px;">Performance per campagna</div>
                 <table class="table" id="campaignAnalyticsTable">
                     <thead><tr><th>Campagna</th><th>Download</th><th>Install</th><th>Conv. %</th><th>UTM Source</th><th>Stato</th></tr></thead>
                     <tbody></tbody>
@@ -4861,9 +4861,11 @@ function applyLegacyCampaignsUiMask() {
 
     const campTable = document.getElementById('campaignAnalyticsTable');
     if (campTable) {
-        const panel = campTable.closest('.card') || campTable.parentElement;
+        const panel = campTable.closest('.card, .fd-table-wrap') || campTable.parentElement;
         if (panel) panel.style.display = hidden ? 'none' : '';
     }
+    const campTitle = document.getElementById('campaignAnalyticsTitle');
+    if (campTitle) campTitle.style.display = hidden ? 'none' : '';
     document.querySelectorAll('#analyticsTopCampaigns').forEach((el) => {
         const card = el.closest('.card');
         if (card) card.style.display = hidden ? 'none' : '';
@@ -11942,8 +11944,13 @@ async function loadAnalytics() {
 
         const tbody = document.querySelector('#campaignAnalyticsTable tbody');
         if (!campaignsEnabled) {
-            const tableWrap = document.getElementById('campaignAnalyticsTable')?.closest('.card');
+            // La tabella non vive in una .card: nascondi il wrapper (o la tabella
+            // stessa) E il titolo, che è un sibling fuori dal wrapper.
+            const campTable = document.getElementById('campaignAnalyticsTable');
+            const tableWrap = campTable?.closest('.card, .fd-table-wrap') || campTable;
             if (tableWrap) tableWrap.style.display = 'none';
+            const campTitle = document.getElementById('campaignAnalyticsTitle');
+            if (campTitle) campTitle.style.display = 'none';
             return;
         }
         if (!tbody) return;
