@@ -25,8 +25,8 @@
             var fdLegacyMediaHide = document.createElement('style');
             fdLegacyMediaHide.textContent = "html[data-app='filodiretto'] #media-library #a2wMediaTabs{display:none!important}";
             document.head.appendChild(fdLegacyMediaHide);
-            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260707-ux-tier3';
-            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260707-ux-tier3';
+            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260708-push-reset';
+            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260708-push-reset';
             var fdCss = ['/filodiretto/tokens.css', '/filodiretto/fd-theme.css', '/filodiretto/fd-typography.css', '/filodiretto/fd-buttons.css', '/filodiretto/fd-components.css', '/filodiretto/fd-header.css', '/filodiretto/fd-layout.css', '/filodiretto/fd-wide-layout.css', '/filodiretto/fd-mobile-gate.css', '/filodiretto/fd-wai.css', '/filodiretto/fd-brand-switcher.css', '/filodiretto/fd-nav.css', '/filodiretto/fd-brand-identity.css', '/filodiretto/fd-brand-scope.css', '/filodiretto/fd-home.css', '/filodiretto/fd-users.css', '/filodiretto/fd-contacts.css', '/filodiretto/fd-media-library.css', '/filodiretto/fd-destructive.css', '/filodiretto/fd-form-dirty.css', '/filodiretto/fd-form-help.css', '/filodiretto/fd-empty-states.css', '/filodiretto/fd-page-states.css', '/filodiretto/fd-danger-zone.css', '/filodiretto/fd-push.css', '/filodiretto/fd-reward-challenge.css', '/filodiretto/fd-analytics.css', '/filodiretto/fd-audiences.css', '/filodiretto/fd-conventions.css', '/filodiretto/fd-pga.css', '/filodiretto/fd-activity-log.css', '/filodiretto/fd-responsive-tables.css'];
             var fdJs = ['/filodiretto/fd-buttons.js', '/filodiretto/fd-header.js', '/filodiretto/fd-layout.js', '/filodiretto/fd-mobile-gate.js', '/filodiretto/fd-wai.js', '/filodiretto/fd-brand-switcher.js', '/filodiretto/fd-icons.js', '/filodiretto/fd-nav.js', '/filodiretto/fd-legacy-campaigns.js', '/filodiretto/fd-hr-copy.js', '/filodiretto/fd-brand-scope.js', '/filodiretto/fd-brand-identity.js', '/filodiretto/fd-brand-pass-flow.js', '/filodiretto/fd-home.js', '/filodiretto/fd-users.js', '/filodiretto/fd-contacts.js', '/filodiretto/fd-media-library.js', '/filodiretto/fd-templates.js', '/filodiretto/fd-passes.js', '/filodiretto/fd-destructive.js', '/filodiretto/fd-form-dirty.js', '/filodiretto/fd-form-help.js', '/filodiretto/fd-form-a11y.js', '/filodiretto/fd-empty-states.js', '/filodiretto/fd-page-states.js', '/filodiretto/fd-danger-zone.js', '/filodiretto/fd-rbac.js', '/filodiretto/fd-push.js', '/filodiretto/fd-reward-challenge.js', '/filodiretto/fd-analytics.js', '/filodiretto/fd-audiences.js', '/filodiretto/fd-conventions.js', '/filodiretto/fd-pga.js', '/filodiretto/fd-pga-engagement.js', '/filodiretto/fd-activity-log.js', '/filodiretto/fd-responsive-tables.js', '/filodiretto/fd-profile.js'];
             var useFdBundle = window.location.search.indexOf('fd_nobundle') === -1;
@@ -8183,9 +8183,17 @@ function setPushProgressPanel(jobOrProgress, result) {
         const err = jobOrProgress?.error ? `Errore: ${jobOrProgress.error}` : '';
         statusEl.textContent = err || labels[progress.phase] || `${pct}%`;
     }
+    // A invio riuscito il riepilogo è già nel toast in alto: il pannello di
+    // avanzamento in basso diventa ridondante → si chiude dopo 3s. In caso di
+    // errore resta, così il manager legge cosa è andato storto.
+    if (status === 'completed') {
+        clearTimeout(window.__pushPanelHideTimer);
+        window.__pushPanelHideTimer = setTimeout(resetPushProgressPanel, 3000);
+    }
 }
 
 function resetPushProgressPanel() {
+    clearTimeout(window.__pushPanelHideTimer);
     const panel = document.getElementById('pushProgressPanel');
     if (!panel) return;
     panel.hidden = true;
@@ -8316,24 +8324,22 @@ function buildImmediatePushBody() {
 }
 
 function resetImmediatePushForm() {
-    const titleEl = document.getElementById('pushTitle');
-    const messageEl = document.getElementById('pushMessage');
-    if (titleEl) titleEl.value = '';
-    if (messageEl) messageEl.value = '';
-    clearPushFieldErrors();
-    ['pushPassLinkUrl', 'pushPassLinkLabel', 'pushPassLinkExpires'].forEach((id) => {
+    // Svuota TUTTI i campi editabili del pannello, incluso il testo notifica
+    // (pushScreenAlert): prima restava compilato dopo un invio riuscito.
+    ['pushScreenAlert', 'pushTitle', 'pushMessage', 'pushBackDetails',
+     'pushBackLinkLabel', 'pushBackLinkUrl',
+     'pushPassLinkUrl', 'pushPassLinkLabel', 'pushPassLinkExpires'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
-    const backDetailsEl = document.getElementById('pushBackDetails');
-    if (backDetailsEl) backDetailsEl.value = '';
-    const pbl = document.getElementById('pushBackLinkLabel');
-    const pbu = document.getElementById('pushBackLinkUrl');
-    if (pbl) pbl.value = '';
-    if (pbu) pbu.value = '';
     const linkedSel = document.getElementById('pushLinkedContent');
     if (linkedSel) linkedSel.value = '';
+    clearPushFieldErrors();
     pushClearStrip();
+    // Riallinea contatori caratteri, anteprima inline e banner notifica:
+    // un evento input su ogni campo svuotato ri-triggera i listener di fd-push.
+    document.querySelectorAll('#pushScreenAlert, #pushTitle, #pushMessage, #pushBackDetails, #pushPassLinkUrl, #pushPassLinkLabel')
+        .forEach((el) => el.dispatchEvent(new Event('input', { bubbles: true })));
 }
 
 async function sendImmediatePush() {
