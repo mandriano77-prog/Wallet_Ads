@@ -25,8 +25,8 @@
             var fdLegacyMediaHide = document.createElement('style');
             fdLegacyMediaHide.textContent = "html[data-app='filodiretto'] #media-library #a2wMediaTabs{display:none!important}";
             document.head.appendChild(fdLegacyMediaHide);
-            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260708-push-reset';
-            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260708-push-reset';
+            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260708-geo-silent';
+            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260708-geo-silent';
             var fdCss = ['/filodiretto/tokens.css', '/filodiretto/fd-theme.css', '/filodiretto/fd-typography.css', '/filodiretto/fd-buttons.css', '/filodiretto/fd-components.css', '/filodiretto/fd-header.css', '/filodiretto/fd-layout.css', '/filodiretto/fd-wide-layout.css', '/filodiretto/fd-mobile-gate.css', '/filodiretto/fd-wai.css', '/filodiretto/fd-brand-switcher.css', '/filodiretto/fd-nav.css', '/filodiretto/fd-brand-identity.css', '/filodiretto/fd-brand-scope.css', '/filodiretto/fd-home.css', '/filodiretto/fd-users.css', '/filodiretto/fd-contacts.css', '/filodiretto/fd-media-library.css', '/filodiretto/fd-destructive.css', '/filodiretto/fd-form-dirty.css', '/filodiretto/fd-form-help.css', '/filodiretto/fd-empty-states.css', '/filodiretto/fd-page-states.css', '/filodiretto/fd-danger-zone.css', '/filodiretto/fd-push.css', '/filodiretto/fd-reward-challenge.css', '/filodiretto/fd-analytics.css', '/filodiretto/fd-audiences.css', '/filodiretto/fd-conventions.css', '/filodiretto/fd-pga.css', '/filodiretto/fd-activity-log.css', '/filodiretto/fd-responsive-tables.css'];
             var fdJs = ['/filodiretto/fd-buttons.js', '/filodiretto/fd-header.js', '/filodiretto/fd-layout.js', '/filodiretto/fd-mobile-gate.js', '/filodiretto/fd-wai.js', '/filodiretto/fd-brand-switcher.js', '/filodiretto/fd-icons.js', '/filodiretto/fd-nav.js', '/filodiretto/fd-legacy-campaigns.js', '/filodiretto/fd-hr-copy.js', '/filodiretto/fd-brand-scope.js', '/filodiretto/fd-brand-identity.js', '/filodiretto/fd-brand-pass-flow.js', '/filodiretto/fd-home.js', '/filodiretto/fd-users.js', '/filodiretto/fd-contacts.js', '/filodiretto/fd-media-library.js', '/filodiretto/fd-templates.js', '/filodiretto/fd-passes.js', '/filodiretto/fd-destructive.js', '/filodiretto/fd-form-dirty.js', '/filodiretto/fd-form-help.js', '/filodiretto/fd-form-a11y.js', '/filodiretto/fd-empty-states.js', '/filodiretto/fd-page-states.js', '/filodiretto/fd-danger-zone.js', '/filodiretto/fd-rbac.js', '/filodiretto/fd-push.js', '/filodiretto/fd-reward-challenge.js', '/filodiretto/fd-analytics.js', '/filodiretto/fd-audiences.js', '/filodiretto/fd-conventions.js', '/filodiretto/fd-pga.js', '/filodiretto/fd-pga-engagement.js', '/filodiretto/fd-activity-log.js', '/filodiretto/fd-responsive-tables.js', '/filodiretto/fd-profile.js'];
             var useFdBundle = window.location.search.indexOf('fd_nobundle') === -1;
@@ -8873,11 +8873,10 @@ async function saveGeofencing() {
         const appleWarning = appleDevices === 0
             ? '<br><strong>Nota:</strong> nessun device Apple registrato per questo brand. Il pass va installato/aperto almeno una volta prima di poter ricevere aggiornamenti.'
             : '';
-        const appleErrorText = appleErrors > 0 ? `, ${appleErrors} errori` : '';
         const googleText = gwAttempted
-            ? `Google: ${gwUpdated}/${gwAttempted} oggetti aggiornati/notificati.`
+            ? `Google: ${gwUpdated}/${gwAttempted} oggetti aggiornati (silenzioso).`
             : 'Google: nessun oggetto Wallet salvato da aggiornare.';
-        statusEl.innerHTML = `Salvato: ${geoLocations.length} POI configurati. Apple: ${passesTouched}/${passCount} pass aggiornati, ${appleSent}/${appleDevices} device notificati${appleErrorText}. ${googleText}${appleWarning}`;
+        statusEl.innerHTML = `Salvato: ${geoLocations.length} POI configurati. Apple: ${passesTouched}/${passCount} pass aggiornati in silenzio (${appleDevices} device: le nuove posizioni arrivano al prossimo aggiornamento del pass, senza notifica). ${googleText}${appleWarning}`;
         statusEl.style.color = 'var(--green)';
         await renderGeoDiagnostics(data.diagnostics);
         toast('Geofencing salvato.');

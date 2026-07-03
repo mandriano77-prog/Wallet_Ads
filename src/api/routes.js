@@ -2903,35 +2903,33 @@ router.put('/brands/:id/geofencing', async (req, res) => {
     );
     const passTouch = await touchPassesByIds(passes.rows.map((p) => p.id));
 
-    let pushCount = 0;
-    let pushErrors = 0;
+    // AGGIORNAMENTO SILENZIOSO. Salvare i POI cambia l'array `locations` del pass:
+    // se inviassimo un APNs, iOS riscaricherebbe un pass modificato SENZA
+    // changeMessage e mostrerebbe la generica "Carta punto vendita modificata" a
+    // TUTTI i dipendenti a ogni salvataggio. Il geofencing è configurazione, non
+    // una comunicazione: i pass sono già aggiornati lato server (touchPassesByIds)
+    // e le nuove location arrivano ai device al prossimo refresh Wallet o alla
+    // prossima push reale. Nessun blast di notifica su nessun canale.
     let appleDeviceCount = 0;
     if (sendApple) {
       const devices = await getDevicesForBrand(req.params.id);
       appleDeviceCount = devices.length;
-      if (devices.length) {
-        const batch = await sendPushBatch(devices.map((d) => d.push_token));
-        pushCount = batch.filter((r) => r.success).length;
-        pushErrors = batch.length - pushCount;
-      }
     }
+    const pushCount = 0;
+    const pushErrors = 0;
 
     let googleSync = { attempted: 0, updated: 0, errors: 0, skipped: !sendGoogle };
     let samsungSync = { attempted: 0, notified: 0, skipped: !sendSamsung || !samsungWallet.isConfigured() };
     const passRows = await pool.query('SELECT * FROM pass_instances WHERE brand_id = $1', [req.params.id]);
     if (sendGoogle) {
-      const geoMessage = (config.locations && config.locations[0] && config.locations[0].relevantText)
-        || 'Aggiornamento geolocalizzazione';
+      // Google: aggiorna merchantLocations sull'oggetto SENZA AddMessage (niente
+      // title/message → update silenzioso, vedi google-wallet-sync).
       googleSync = await syncGoogleWalletObjectsForPasses({
         brand: await getBrand(req.params.id),
-        passes: passRows.rows,
-        title: 'VICINO A TE',
-        message: geoMessage
+        passes: passRows.rows
       });
     }
-    if (sendSamsung && samsungWallet.isConfigured()) {
-      samsungSync = await notifySamsungSavedPasses(passRows.rows);
-    }
+    // Samsung: nessuna notifica di stato su un cambio geofencing (silenzioso).
 
     const hubSettings = await getHubSettings(req.params.id);
     const hubMerchantLocations = []; // merchant HUB esclusi dal geofencing pass (luglio 2026)

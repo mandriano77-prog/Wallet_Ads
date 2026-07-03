@@ -157,8 +157,8 @@ test('fd.bundle.css preserves calc() operator spacing (W.AI inset)', () => {
 
 test('index.html bundle cache references wide-layout tag', () => {
   const html = read('src/dashboard/index.html');
-  assert.match(html, /fd\.bundle\.css\?v=20260708-push-reset/);
-  assert.match(html, /fd\.bundle\.js\?v=20260708-push-reset/);
+  assert.match(html, /fd\.bundle\.css\?v=20260708-geo-silent/);
+  assert.match(html, /fd\.bundle\.js\?v=20260708-geo-silent/);
   assert.match(html, /\/dashboard\/lib\/public-url\.js/);
   assert.match(html, /function a2wPublicUrlBase/);
   assert.match(html, /#a2wMediaTabs\{display:none!important\}/);
@@ -486,14 +486,15 @@ test('Geofencing copy distinguishes Apple text from Google POI support', () => {
   assert.match(gw, /normalizeMerchantLocations/);
 });
 
-test('Geofencing saves POIs and restores Google Wallet notify message', () => {
+test('Geofencing save is silent: updates locations without notifying', () => {
   const routes = read('src/api/routes.js');
   const geofencePut = routes.match(/router\.put\('\/brands\/:id\/geofencing'[\s\S]*?router\.get\('\/analytics/)[0];
+  // Aggiorna comunque i pass lato server e le location su Google...
+  assert.match(geofencePut, /touchPassesByIds/);
   assert.match(geofencePut, /syncGoogleWalletObjectsForPasses\(\{/);
-  assert.match(geofencePut, /const geoMessage = \(config\.locations && config\.locations\[0\] && config\.locations\[0\]\.relevantText\)/);
-  assert.match(geofencePut, /title:\s*'VICINO A TE'/);
-  assert.match(geofencePut, /message:\s*geoMessage/);
-  assert.match(geofencePut, /Aggiornamento geolocalizzazione/);
+  // ...ma SENZA notifiche: niente APNs blast (generica) e niente AddMessage Google.
+  assert.doesNotMatch(geofencePut, /sendPushBatch\(/);
+  assert.doesNotMatch(geofencePut, /title:\s*'VICINO A TE'/);
 });
 
 test('Google Wallet HR toGooglePass uses brand name and generic layout fields', () => {

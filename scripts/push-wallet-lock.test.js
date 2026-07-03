@@ -270,3 +270,13 @@ test('LOCK: link retro senza riga di testo duplicata', () => {
     assert.match(f.attributedValue, /<a href=/);
   });
 });
+
+test('LOCK: salvataggio geofencing è silenzioso (niente notifica generica)', () => {
+  const routes = fs.readFileSync(path.join(__dirname, '../src/api/routes.js'), 'utf8');
+  const put = routes.split("router.put('/brands/:id/geofencing'")[1].split('router.')[0];
+  // NON deve inviare un blast APNs sul salvataggio geofencing: un pass modificato
+  // senza changeMessage scatena "Carta punto vendita modificata" su tutti gli iPhone.
+  assert.doesNotMatch(put, /sendPushBatch\(/, 'geofencing save non deve inviare APNs (notifica generica)');
+  // Google deve aggiornare le location SENZA title/message (update silenzioso).
+  assert.doesNotMatch(put, /title: 'VICINO A TE'/, 'geofencing save Google deve essere silenzioso');
+});
