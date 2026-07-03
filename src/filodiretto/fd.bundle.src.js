@@ -9935,6 +9935,15 @@
     if (caption) {
       html += '<span style="color:var(--text2);"> \u00b7 ' + esc(caption) + '</span>\u201d ' +
         '<span style="color:var(--text2);font-style:italic;">(la parte dopo \u00b7 \u00e8 la didascalia del template, aggiunta automatica)</span>';
+      // Il limite 178 (validato su device) protegge solo la parte manuale: la coda
+      // si somma oltre. iOS tronca dalla fine, quindi con testi lunghi la didascalia
+      // pu\u00f2 sparire dal banner — avvisa quando il totale sfora il budget.
+      var total = manual.length + 3 + caption.length;
+      if (total > SCREEN_ALERT_MAX) {
+        html += '<br><span style="color:var(--fd-color-warning-text, #a16207);">\u26a0 Testo + didascalia = ' + total +
+          ' caratteri: oltre ' + SCREEN_ALERT_MAX + ' iOS pu\u00f2 troncare la parte finale sul lock screen. ' +
+          'Consigliato max ' + Math.max(0, SCREEN_ALERT_MAX - 3 - caption.length) + ' caratteri di testo.</span>';
+      }
     } else {
       html += '\u201d';
     }
