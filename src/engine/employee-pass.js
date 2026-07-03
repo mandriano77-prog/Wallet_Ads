@@ -466,6 +466,23 @@ function buildBackSections({ brand, template, instance, member, brandConfig = {}
     });
   }
 
+  // EXTRA — fringe benefit/welfare: link al portale (sezione EXTRA) solo se il
+  // brand ha almeno un'integrazione attiva. Vive accanto ai perk (HUB).
+  if (portalUrl) {
+    try {
+      const { enabledIntegrations } = require('./integrations');
+      if (enabledIntegrations(brandConfig).length > 0) {
+        const sep = portalUrl.includes('#') ? '' : '#extra';
+        sections.push({
+          kind: 'link',
+          key: 'extra_benefits',
+          label: 'EXTRA',
+          url: portalUrl + sep,
+        });
+      }
+    } catch (_) { /* engine assente: salta il link EXTRA */ }
+  }
+
   const support = buildSupportBackLink(hrBack);
   if (support) sections.push(support);
 

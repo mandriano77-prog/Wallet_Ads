@@ -58,6 +58,7 @@ const {
   listMerchantGeofenceLocationsForBrand
 } = require('../db');
 const { buildGeofenceDiagnostics } = require('../engine/geofencing');
+const { availableProviders, enabledIntegrations, getAdapter } = require('../engine/integrations');
 const {
   getPassHoldersInsights,
   countAudienceMembers,
@@ -2964,6 +2965,54 @@ router.put('/brands/:id/geofencing', async (req, res) => {
       samsung: samsungSync,
       diagnostics,
     });
+  } catch (err) { res.status(err.statusCode || 500).json({ error: err.message }); }
+});
+
+// EXTRA — Integrazioni (fringe benefit / welfare). Config per brand: quali
+// provider sono attivi. I dati personali del dipendente stanno nel portale.
+router.get('/brands/:id/integrations', async (req, res) => {
+  try {
+    if (!requireOwnedBrandPk(req, res, req.params.id)) return;
+    const brand = await getBrand(req.params.id);
+    if (!brand) return res.status(404).json({ error: 'Brand non trovato' });
+    const configured = Array.isArray(brand.config?.integrations) ? brand.config.integrations : [];
+    res.json({
+      integrations: configured,
+      enabled: enabledIntegrations(brand.config || {}),
+      available_providers: availableProviders(),
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.put('/brands/:id/integrations', async (req, res) => {
+  try {
+    if (!requireOwnedBrandPk(req, res, req.params.id)) return;
+    if (!requireWriteAccess(req, res)) return;
+    const brand = await getBrand(req.params.id);
+    if (!brand) return res.status(404).json({ error: 'Brand non trovato' });
+    const input = Array.isArray(req.body?.integrations) ? req.body.integrations : [];
+    const clean = [];
+    for (const it of input.slice(0, 30)) {
+      const adapter = getAdapter(it?.type);
+      if (!adapter) continue;
+      const mode = it.mode === 'deeplink' ? 'deeplink' : 'api';
+      const entry = {
+        type: adapter.type,
+        label: String(it.label || adapter.defaultLabel || adapter.type).slice(0, 80),
+        category: ['buoni_pasto', 'welfare', 'mobilita', 'altro'].includes(it.category)
+          ? it.category : (adapter.defaultCategory || 'altro'),
+        enabled: it.enabled !== false,
+        mode,
+      };
+      if (it.logo_url) entry.logo_url = String(it.logo_url).slice(0, 500);
+      if (mode === 'deeplink' && it.deeplink_url) {
+        entry.deeplink_url = assertHttpsUrl(it.deeplink_url, 'Link integrazione');
+      }
+      clean.push(entry);
+    }
+    const config = { ...(brand.config || {}), integrations: clean };
+    await updateBrand(req.params.id, { config });
+    res.json({ success: true, integrations: clean, enabled: enabledIntegrations(config) });
   } catch (err) { res.status(err.statusCode || 500).json({ error: err.message }); }
 });
 

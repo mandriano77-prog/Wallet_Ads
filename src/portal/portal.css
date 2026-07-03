@@ -846,3 +846,20 @@
     font-size: var(--text-xs);
     color: var(--text-secondary);
   }
+
+/* EXTRA — fringe benefit / welfare del dipendente */
+.extra-group { margin-bottom: var(--space-6); }
+.extra-group__title { font-size: var(--text-sm); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin: 0 0 var(--space-3); }
+.extra-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-3); }
+.extra-card { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border-default); border-radius: var(--radius-lg, 14px); background: var(--surface, #fff); }
+.extra-logo { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex: 0 0 auto; }
+.extra-logo--ph { display: flex; align-items: center; justify-content: center; background: var(--bg-subtle, #f1f5f9); color: var(--text-secondary); font-weight: 700; font-size: 18px; }
+.extra-card__body { flex: 1; min-width: 0; }
+.extra-card__label { font-weight: 600; font-size: 15px; color: var(--text-primary); }
+.extra-balance { font-size: 20px; font-weight: 700; color: var(--text-primary); margin-top: 2px; }
+.extra-status { display: inline-block; margin-top: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.extra-status--ok { background: #ecfdf5; color: #047857; }
+.extra-status--err { background: #fef2f2; color: #b91c1c; }
+.extra-status--muted { background: var(--bg-subtle, #f1f5f9); color: var(--text-secondary); }
+.extra-card__action .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
+@media (max-width: 480px) { .extra-grid { grid-template-columns: 1fr; } }

@@ -65,6 +65,7 @@
   let consents = [];
   let pushHistory = null;
   let consentLog = [];
+  let extraLoaded = false;
   let pushFilter = 'all';
   let consentSaving = false;
 
@@ -617,8 +618,63 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
         if (page === 'push' && !pushHistory) loadPushHistory();
         if (page === 'dati' && !consentLog.length) loadConsentLog();
+        if (page === 'extra' && !extraLoaded) loadExtra();
       });
     });
+  }
+
+  async function loadExtra() {
+    extraLoaded = true;
+    const host = document.getElementById('extra-content');
+    if (host) host.innerHTML = '<p style="color:var(--text-muted)">Caricamento…</p>';
+    try {
+      const data = await apiJson('/me/integrations');
+      renderExtra(data.groups || []);
+    } catch (err) {
+      extraLoaded = false;
+      if (host) host.innerHTML = '<p style="color:var(--text-muted)">Servizi non disponibili al momento.</p>';
+    }
+  }
+
+  function extraStatusLabel(status) {
+    if (status === 'connected') return { text: 'Collegato', cls: 'ok' };
+    if (status === 'error') return { text: 'Errore', cls: 'err' };
+    return { text: 'Da collegare', cls: 'muted' };
+  }
+
+  function renderExtra(groups) {
+    const host = document.getElementById('extra-content');
+    if (!host) return;
+    if (!groups.length) {
+      host.innerHTML = '<div class="card" style="padding:var(--space-5)"><p style="margin:0;color:var(--text-muted)">'
+        + 'Nessun servizio EXTRA attivo per la tua azienda al momento.</p></div>';
+      return;
+    }
+    host.innerHTML = groups.map(function (g) {
+      const cards = g.items.map(function (it) {
+        const st = extraStatusLabel(it.status);
+        const balance = it.data && it.data.balance != null
+          ? '<div class="extra-balance">' + esc(String(it.data.balance)) + ' ' + esc(it.data.currency || '') + '</div>'
+          : '';
+        let action = '';
+        if (it.mode === 'deeplink' && it.deeplink_url) {
+          action = '<a class="btn btn-sm" href="' + esc(it.deeplink_url) + '" target="_blank" rel="noopener">Apri</a>';
+        } else if (it.status !== 'connected') {
+          action = '<button type="button" class="btn btn-sm" disabled title="Presto disponibile">Collega</button>';
+        }
+        const logo = it.logo_url
+          ? '<img class="extra-logo" src="' + esc(it.logo_url) + '" alt="" />'
+          : '<div class="extra-logo extra-logo--ph">' + esc((it.label || '?').charAt(0).toUpperCase()) + '</div>';
+        return '<div class="extra-card">'
+          + logo
+          + '<div class="extra-card__body"><div class="extra-card__label">' + esc(it.label) + '</div>'
+          + '<span class="extra-status extra-status--' + st.cls + '">' + st.text + '</span>' + balance + '</div>'
+          + '<div class="extra-card__action">' + action + '</div>'
+          + '</div>';
+      }).join('');
+      return '<div class="extra-group"><h2 class="extra-group__title">' + esc(g.category_label) + '</h2>'
+        + '<div class="extra-grid">' + cards + '</div></div>';
+    }).join('');
   }
 
   async function loadConsentLog() {
@@ -789,6 +845,10 @@
       showApp();
       renderAll();
       bindNavigation();
+    if ((window.location.hash || '').replace('#','') === 'extra') {
+      const t = document.querySelector('.nav-item[data-page="extra"]');
+      if (t) t.click();
+    }
       bindActions();
     } catch (err) {
       showGate(

@@ -1663,6 +1663,28 @@ async function ensureMembersHrSchema() {
   await pool.query(
     `CREATE INDEX IF NOT EXISTS idx_members_activation_status ON members(brand_id, activation_status)`
   ).catch(logSchemaError);
+
+  // EXTRA — fringe benefit / welfare del dipendente (area "Integrazioni").
+  // Stato e dati cache per (member, provider). credentials CIFRATE (fase 2).
+  await pool.query(`CREATE TABLE IF NOT EXISTS member_integrations (
+    id TEXT PRIMARY KEY,
+    member_id TEXT NOT NULL,
+    brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'not_connected',
+    credentials TEXT,
+    data JSONB DEFAULT '{}'::jsonb,
+    last_synced_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (member_id, type)
+  )`).catch(logSchemaError);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_member_integrations_member ON member_integrations(member_id)`
+  ).catch(logSchemaError);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_member_integrations_brand ON member_integrations(brand_id, type)`
+  ).catch(logSchemaError);
 }
 
 async function getMemberForPass(passId) {

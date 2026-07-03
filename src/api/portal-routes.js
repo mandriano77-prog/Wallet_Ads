@@ -17,6 +17,8 @@ const {
   isValidConsentType
 } = require('../db/portal');
 const { getPassInstance, getTemplate, touchPass, logEvent } = require('../db');
+const { listMemberIntegrations } = require('../db/integrations');
+const { enabledIntegrations } = require('../engine/integrations');
 const { verifyPortalToken, buildPortalUrl } = require('../engine/portal-auth');
 const { readPassPortalToken, savePassPortalToken } = require('../engine/portal-pass-link');
 const { createPkpass } = require('../engine/passkit');
@@ -172,6 +174,50 @@ router.get('/me', async (req, res) => {
     res.json({ profile: formatProfileRow(row), consents });
   } catch (err) {
     console.error('[portal] GET /me', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// EXTRA — fringe benefit / welfare del dipendente. Merge tra i provider abilitati
+// dal brand e lo stato di collegamento del singolo dipendente, raggruppati per
+// categoria. Fase 1: ogni provider è "not_connected" finché la sua API non c'è.
+router.get('/me/integrations', async (req, res) => {
+  try {
+    const row = await getPassForPortal(req.portal.pass_id);
+    if (!row) return res.status(404).json({ error: 'Pass non trovato' });
+    const cfg = typeof row.brand_config === 'string'
+      ? JSON.parse(row.brand_config) : (row.brand_config || {});
+    const enabled = enabledIntegrations(cfg);
+    const memberId = row.member_id || null;
+    const states = memberId ? await listMemberIntegrations(memberId) : [];
+    const stateByType = new Map(states.map((st) => [st.type, st]));
+
+    const items = enabled.map((it) => {
+      const st = stateByType.get(it.type);
+      return {
+        type: it.type,
+        label: it.label,
+        category: it.category,
+        category_label: it.category_label,
+        logo_url: it.logo_url,
+        mode: it.mode,
+        deeplink_url: it.deeplink_url,
+        status: st?.status || 'not_connected',
+        data: st?.data || {},
+        last_synced_at: st?.last_synced_at || null,
+      };
+    });
+
+    // Raggruppa per categoria mantenendo l'ordine di CATEGORIES.
+    const order = ['buoni_pasto', 'welfare', 'mobilita', 'altro'];
+    const groups = [];
+    for (const cat of order) {
+      const inCat = items.filter((i) => i.category === cat);
+      if (inCat.length) groups.push({ category: cat, category_label: inCat[0].category_label, items: inCat });
+    }
+    res.json({ groups, total: items.length });
+  } catch (err) {
+    console.error('[portal] GET /me/integrations', err);
     res.status(500).json({ error: err.message });
   }
 });
