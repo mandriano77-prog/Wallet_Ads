@@ -47,7 +47,14 @@ function resolveWalletAlertChangeMessage(employeePass) {
     if (changeMessage) return changeMessage.replace(/%@/g, value).trim();
     return value;
   }
-  if (employeePass.headerHint?.changeMessage) return String(employeePass.headerHint.changeMessage).trim();
+  if (employeePass.headerHint?.changeMessage) {
+    // Caso didascalia fusa: iOS sostituisce %@ col valore visibile del campo
+    // (didascalia, token invisibile escluso) — l'anteprima deve mostrare lo stesso.
+    const hintValue = String(employeePass.headerHint.value || '')
+      .replace(/[\u200b\u200c\u200d\u2060]/g, '')
+      .trim();
+    return String(employeePass.headerHint.changeMessage).replace(/%@/g, hintValue).trim();
+  }
   return '';
 }
 
@@ -158,7 +165,9 @@ async function buildPushPassPreview({ brand, template, body = {} }) {
     },
     lock_screen: {
       app_name: brand?.name || 'Wallet',
-      body: lockScreenBody.slice(0, 178),
+      // 178 è il limite del testo manuale; la notifica reale accoda " · " +
+      // didascalia (max 64) — l'anteprima deve mostrare anche la coda.
+      body: lockScreenBody.slice(0, 245),
     },
     header: headerField
       ? { label: headerField.label, value: String(headerField.value || '').replace(/[\u200b\u200c\u200d\u2060]/g, '') }

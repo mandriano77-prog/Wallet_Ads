@@ -246,7 +246,9 @@ function mergePushAlertIntoHeaderHint(headerHint, pushAnn) {
       headerHint: {
         ...headerHint,
         value: String(headerHint.value || '') + token,
-        changeMessage: `${alertText}%@`,
+        // iOS sostituisce %@ col valore del campo (didascalia visibile + token):
+        // senza separatore testo manuale e didascalia si attaccano sul lock screen.
+        changeMessage: `${alertText} · %@`,
       },
       pushAlert: null,
     };

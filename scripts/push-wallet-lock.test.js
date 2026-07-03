@@ -104,7 +104,10 @@ test('LOCK: didascalia header decorativa convive col carrier notifica', () => {
   });
   assert.ok(ep.headerHint, 'la didascalia decorativa non deve più essere soppressa');
   assert.equal(ep.headerHint.label, 'CLICCA SUI');
-  assert.equal(ep.headerHint.changeMessage, 'PROMO: Solo oggi%@');
+  // Separatore " · " prima di %@: iOS lo sostituisce con la didascalia visibile,
+  // senza separatore testo manuale e didascalia si attaccano (approvato dal
+  // proprietario, luglio 2026 — anteprima back office allineata).
+  assert.equal(ep.headerHint.changeMessage, 'PROMO: Solo oggi \u00b7 %@');
   assert.equal(visiblePassValue(ep.headerHint.value), 'Per ulteriori info');
   assert.ok(ep.headerHint.value.length > 'Per ulteriori info'.length);
   assert.equal(ep.pushAlert, null, 'con didascalia il carrier va fuso in info_hint, non in un secondo campo');
