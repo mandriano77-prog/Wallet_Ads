@@ -428,6 +428,7 @@ test('Geofencing back message renders as a silent back field (no changeMessage)'
   });
   const geo = ep.backSections.find((s) => s.key === 'geo_back_message');
   assert.ok(geo, 'sezione geo_back_message presente quando configurata');
+  assert.equal(ep.backSections[0].key, 'geo_back_message', 'il messaggio geo è la prima sezione del retro');
   assert.equal(geo.body, 'Passa a trovarci e mostra il tuo pass.');
   const apple = toApplePass(ep);
   const field = (apple.passStructure.backFields || []).find((f) => f.key === 'geo_back_message');

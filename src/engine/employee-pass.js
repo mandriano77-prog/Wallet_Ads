@@ -419,6 +419,19 @@ function buildBackSections({ brand, template, instance, member, brandConfig = {}
   const hrBack = resolveHrBackSource(template, brand);
   const pushAnn = resolvePushAnnouncement(brandConfig, instance);
 
+  // Messaggio geofencing: PRIMA cosa visibile girando il pass (prima dei link
+  // HUB/Supporto/Area privata). Testo fisso, senza changeMessage → aggiornamento
+  // silenzioso. Apple non consente un retro diverso per singolo POI.
+  const geoBack = String(brandConfig.geoBackMessage || '').trim();
+  if (geoBack) {
+    sections.push({
+      kind: 'alert',
+      key: 'geo_back_message',
+      label: ' ',
+      body: geoBack.slice(0, 500),
+    });
+  }
+
   // Link CTA first. Notification copy is handled by the front technical field,
   // not mirrored on the back.
   const dynamicLink = resolveVariableLink(instance, template, brandConfig);
@@ -443,18 +456,6 @@ function buildBackSections({ brand, template, instance, member, brandConfig = {}
     }
   }
 
-  // Messaggio geofencing sul retro (sempre presente, senza changeMessage →
-  // aggiornamento silenzioso). Testo fisso configurato nel pannello Geofencing;
-  // Apple non consente un retro diverso per singolo POI.
-  const geoBack = String(brandConfig.geoBackMessage || '').trim();
-  if (geoBack) {
-    sections.push({
-      kind: 'alert',
-      key: 'geo_back_message',
-      label: ' ',
-      body: geoBack.slice(0, 500),
-    });
-  }
 
   if (hubUrl) {
     sections.push({
