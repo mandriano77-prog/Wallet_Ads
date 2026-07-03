@@ -237,14 +237,45 @@
     }, true);
   }
 
+  var WAI_HINT_KEY = 'fd-wai-hint-seen-v1';
+
+  function maybeShowFirstUseHint(fab) {
+    try { if (localStorage.getItem(WAI_HINT_KEY)) return; } catch (_) { return; }
+    if (document.getElementById('fdWaiHint')) return;
+    var hint = document.createElement('div');
+    hint.id = 'fdWaiHint';
+    hint.className = 'fd-wai-hint';
+    hint.setAttribute('role', 'status');
+    hint.innerHTML =
+      '<button type="button" class="fd-wai-hint__close" aria-label="Chiudi">\u00d7</button>' +
+      '<strong>Prova W.AI</strong>' +
+      '<span>Scrive le notifiche e genera immagini per te. Es. \u201cAvvisa del cedolino di dicembre\u201d.</span>';
+    document.body.appendChild(hint);
+    function dismiss() {
+      try { localStorage.setItem(WAI_HINT_KEY, '1'); } catch (_) {}
+      hint.remove();
+    }
+    hint.querySelector('.fd-wai-hint__close').addEventListener('click', function (e) { e.stopPropagation(); dismiss(); });
+    hint.addEventListener('click', function () {
+      dismiss();
+      if (typeof window.toggleWaiOverlay === 'function') window.toggleWaiOverlay();
+    });
+    // Auto-dismiss dopo 12s se ignorato (ma resta "visto" solo se interagito).
+    setTimeout(function () { if (document.getElementById('fdWaiHint')) hint.remove(); }, 12000);
+  }
+
   function bindWaiControls() {
     var fab = document.getElementById('waiBtn');
     if (!fab) return;
     bindWaiTrigger(fab, function (e) {
       if (typeof window.toggleWaiOverlay !== 'function') return;
       e.preventDefault();
+      try { localStorage.setItem(WAI_HINT_KEY, '1'); } catch (_) {}
+      var h = document.getElementById('fdWaiHint');
+      if (h) h.remove();
       window.toggleWaiOverlay();
     });
+    setTimeout(function () { maybeShowFirstUseHint(fab); }, 1500);
   }
 
   function initFdWai() {

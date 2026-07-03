@@ -116,6 +116,28 @@ app.post('/csp-report',
     }
     res.status(204).send();
   });
+
+// Telemetria UX leggera (nessun dato personale, solo eventi anonimi come lo
+// scatto del mobile-gate). Serve a decidere sui DATI se costruire una modalità
+// mobile invece di supporre. Throttle per non inondare i log.
+const uxEventCounts = Object.create(null);
+let lastUxFlushAt = Date.now();
+app.post('/ux-event',
+  express.json({ limit: '2kb' }),
+  (req, res) => {
+    const name = String(req.body?.event || '').slice(0, 40).replace(/[^a-z0-9_.-]/gi, '');
+    if (name) {
+      uxEventCounts[name] = (uxEventCounts[name] || 0) + 1;
+      const now = Date.now();
+      // Flush aggregato ogni 60s: una riga di log con i conteggii, non un evento per hit.
+      if (now - lastUxFlushAt > 60000) {
+        console.log('[ux-event]', JSON.stringify(uxEventCounts));
+        for (const k of Object.keys(uxEventCounts)) delete uxEventCounts[k];
+        lastUxFlushAt = now;
+      }
+    }
+    res.status(204).send();
+  });
 app.use(cors(corsOptions()));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '15mb' }));

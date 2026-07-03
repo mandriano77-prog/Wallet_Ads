@@ -25,8 +25,8 @@
             var fdLegacyMediaHide = document.createElement('style');
             fdLegacyMediaHide.textContent = "html[data-app='filodiretto'] #media-library #a2wMediaTabs{display:none!important}";
             document.head.appendChild(fdLegacyMediaHide);
-            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260706-ux-tier2';
-            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260706-ux-tier2';
+            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260707-ux-tier3';
+            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260707-ux-tier3';
             var fdCss = ['/filodiretto/tokens.css', '/filodiretto/fd-theme.css', '/filodiretto/fd-typography.css', '/filodiretto/fd-buttons.css', '/filodiretto/fd-components.css', '/filodiretto/fd-header.css', '/filodiretto/fd-layout.css', '/filodiretto/fd-wide-layout.css', '/filodiretto/fd-mobile-gate.css', '/filodiretto/fd-wai.css', '/filodiretto/fd-brand-switcher.css', '/filodiretto/fd-nav.css', '/filodiretto/fd-brand-identity.css', '/filodiretto/fd-brand-scope.css', '/filodiretto/fd-home.css', '/filodiretto/fd-users.css', '/filodiretto/fd-contacts.css', '/filodiretto/fd-media-library.css', '/filodiretto/fd-destructive.css', '/filodiretto/fd-form-dirty.css', '/filodiretto/fd-form-help.css', '/filodiretto/fd-empty-states.css', '/filodiretto/fd-page-states.css', '/filodiretto/fd-danger-zone.css', '/filodiretto/fd-push.css', '/filodiretto/fd-reward-challenge.css', '/filodiretto/fd-analytics.css', '/filodiretto/fd-audiences.css', '/filodiretto/fd-conventions.css', '/filodiretto/fd-pga.css', '/filodiretto/fd-activity-log.css', '/filodiretto/fd-responsive-tables.css'];
             var fdJs = ['/filodiretto/fd-buttons.js', '/filodiretto/fd-header.js', '/filodiretto/fd-layout.js', '/filodiretto/fd-mobile-gate.js', '/filodiretto/fd-wai.js', '/filodiretto/fd-brand-switcher.js', '/filodiretto/fd-icons.js', '/filodiretto/fd-nav.js', '/filodiretto/fd-legacy-campaigns.js', '/filodiretto/fd-hr-copy.js', '/filodiretto/fd-brand-scope.js', '/filodiretto/fd-brand-identity.js', '/filodiretto/fd-brand-pass-flow.js', '/filodiretto/fd-home.js', '/filodiretto/fd-users.js', '/filodiretto/fd-contacts.js', '/filodiretto/fd-media-library.js', '/filodiretto/fd-templates.js', '/filodiretto/fd-passes.js', '/filodiretto/fd-destructive.js', '/filodiretto/fd-form-dirty.js', '/filodiretto/fd-form-help.js', '/filodiretto/fd-form-a11y.js', '/filodiretto/fd-empty-states.js', '/filodiretto/fd-page-states.js', '/filodiretto/fd-danger-zone.js', '/filodiretto/fd-rbac.js', '/filodiretto/fd-push.js', '/filodiretto/fd-reward-challenge.js', '/filodiretto/fd-analytics.js', '/filodiretto/fd-audiences.js', '/filodiretto/fd-conventions.js', '/filodiretto/fd-pga.js', '/filodiretto/fd-pga-engagement.js', '/filodiretto/fd-activity-log.js', '/filodiretto/fd-responsive-tables.js', '/filodiretto/fd-profile.js'];
             var useFdBundle = window.location.search.indexOf('fd_nobundle') === -1;
@@ -833,7 +833,8 @@
         .color-input-wrap input[type="color"] { width: 40px; height: 34px; border: 1px solid var(--border-default); border-radius: var(--radius-sm); cursor: pointer; padding: 0; min-height: auto; }
         .color-input-wrap input[type="text"] { flex: 1; }
 
-        .login-error { color: var(--danger); font-size: var(--text-xs); margin-bottom: var(--space-3); display: none; }
+        :where(input,select,textarea,button,a,[tabindex]):focus-visible { outline: 2px solid var(--accent, #8B5CF6); outline-offset: 2px; }
+                .login-error { color: var(--danger); font-size: var(--text-xs); margin-bottom: var(--space-3); display: none; }
         .login-gate {
             position: fixed;
             inset: 0;
@@ -1682,7 +1683,7 @@
                     </div>
                 </div>
                 <p id="passFilterSessionHint" style="font-size:11px;color:var(--text2);margin:-8px 0 14px;">Campagna, ricerca e pagina sono ricordati per questo brand finché il tab del browser è aperto.</p>
-                <div id="passesContent" style="color:var(--text2)">Caricamento...</div>
+                <div id="passesContent" style="color:var(--text2)" aria-live="polite">Caricamento...</div>
                 <details id="passWalletTechAccordion" class="pass-wallet-tech-accordion" data-a2w-component="pass-wallet-tech">
                     <summary class="pass-wallet-tech-accordion__summary">
                         <span class="pass-wallet-tech-accordion__label">Collegamenti tecnici Wallet (avanzato)</span>
@@ -3015,7 +3016,7 @@
                     <button type="button" class="tabs-bar__tab" role="tab" id="analyticsTab_activity" aria-selected="false" aria-controls="analyticsTabPanel_activity" data-requires-perm="activity_log" onclick="switchAnalyticsSectionTab('activity-log')">Log Attività</button>
                 </div>
                 <div id="analyticsTabPanel_metrics" class="a2w-section-tab-panel" role="tabpanel" aria-labelledby="analyticsTab_metrics">
-                <div class="stats-grid" id="analyticsStats"></div>
+                <div class="stats-grid" id="analyticsStats" aria-live="polite"></div>
                 <div class="form-row" style="margin-bottom:16px;">
                     <div class="card" style="margin-bottom:0;">
                         <div class="analytics-toolbar">
@@ -3084,7 +3085,7 @@
                             <th>Device</th>
                             <th>Dettagli</th>
                         </tr></thead>
-                        <tbody id="activityLogBody"><tr><td colspan="5" style="color:var(--text2)">Caricamento…</td></tr></tbody>
+                        <tbody id="activityLogBody" aria-live="polite"><tr><td colspan="5" style="color:var(--text2)">Caricamento…</td></tr></tbody>
                     </table>
                 </div>
                 </div>

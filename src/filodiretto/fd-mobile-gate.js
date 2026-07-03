@@ -30,17 +30,54 @@
       '<p class="fd-mobile-gate__desc">Il backoffice FiloDiretto è ottimizzato per tablet e desktop. ' +
       'Ruota il dispositivo o apri la dashboard da un browser con larghezza almeno 768px.</p>' +
       '<p class="fd-mobile-gate__hint">Da 768px in su restano disponibili layout tablet e tabelle responsive.</p>' +
+      '<button type="button" class="fd-mobile-gate__continue" id="fdMobileGateContinue">Continua comunque</button>' +
       '</div>';
     document.body.appendChild(overlay);
+    var cont = overlay.querySelector('#fdMobileGateContinue');
+    if (cont) cont.addEventListener('click', function () {
+      gateBypassed = true;
+      document.documentElement.classList.remove('fd-mobile-gated');
+      overlay.hidden = true;
+      try {
+        var payload = JSON.stringify({ event: 'mobile_gate_bypass' });
+        if (navigator.sendBeacon) navigator.sendBeacon('/ux-event', new Blob([payload], { type: 'application/json' }));
+      } catch (_) {}
+    });
     return overlay;
+  }
+
+  var gateBeaconSent = false;
+  var gateBypassed = false;
+  function reportGateOnce() {
+    // Un solo beacon per sessione: misura quanti utenti sbattono sul gate,
+    // così la decisione "serve una modalità mobile?" si prende sui dati.
+    if (gateBeaconSent) return;
+    gateBeaconSent = true;
+    try {
+      var payload = JSON.stringify({ event: 'mobile_gate_block' });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/ux-event', new Blob([payload], { type: 'application/json' }));
+      } else {
+        fetch('/ux-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(function () {});
+      }
+    } catch (_) {}
   }
 
   function syncMobileGate() {
     if (!isFiloApp()) return;
     var gated = window.matchMedia(MQ).matches;
-    document.documentElement.classList.toggle('fd-mobile-gated', gated);
     var node = ensureOverlay();
+    if (gated && gateBypassed) {
+      // L'utente ha scelto "continua comunque": non ripresentare il muro
+      // finché resta in questa fascia di larghezza.
+      document.documentElement.classList.remove('fd-mobile-gated');
+      node.hidden = true;
+      return;
+    }
+    if (!gated) gateBypassed = false;
+    document.documentElement.classList.toggle('fd-mobile-gated', gated);
     node.hidden = !gated;
+    if (gated) reportGateOnce();
   }
 
   function initFdMobileGate() {

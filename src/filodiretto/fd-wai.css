@@ -78,3 +78,39 @@ html[data-app='filodiretto'] #waiOverlay.wai-panel.wai-panel--open {
     max-height: 70vh;
   }
 }
+
+.fd-wai-hint {
+  position: fixed;
+  right: calc(var(--fd-wai-fab-inset, 44px));
+  bottom: calc(var(--fd-wai-fab-inset, 44px) + var(--fd-wai-fab-size, 64px) + var(--fd-wai-fab-gap, 10px));
+  z-index: 10038;
+  max-width: 300px;
+  padding: 14px 16px 14px 18px;
+  border-radius: 14px;
+  background: var(--fd-color-text-primary, #0f172a);
+  color: #fff;
+  box-shadow: 0 12px 32px rgba(15,23,42,.28);
+  cursor: pointer;
+  animation: fdWaiHintIn .35s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fd-wai-hint strong { font-size: 14px; }
+.fd-wai-hint span { font-size: 12.5px; line-height: 1.45; color: rgba(255,255,255,.82); }
+.fd-wai-hint::after {
+  content: '';
+  position: absolute;
+  right: 26px; bottom: -8px;
+  width: 16px; height: 16px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+.fd-wai-hint__close {
+  position: absolute; top: 6px; right: 8px;
+  background: none; border: none; color: rgba(255,255,255,.6);
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 4px;
+}
+.fd-wai-hint__close:hover { color: #fff; }
+@keyframes fdWaiHintIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 767px) { .fd-wai-hint { display: none; } }
