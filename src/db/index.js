@@ -1700,6 +1700,99 @@ async function ensureMembersHrSchema() {
   await pool.query(
     `CREATE INDEX IF NOT EXISTS idx_integration_api_keys_brand ON integration_api_keys(brand_id)`
   ).catch(logSchemaError);
+
+  // 2FA dashboard — challenge OTP (hash del codice, mai in chiaro) e
+  // dispositivi fidati (hash del token consegnato al browser).
+  await pool.query(`CREATE TABLE IF NOT EXISTS auth_otp_challenges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    consumed_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(logSchemaError);
+  await pool.query(`CREATE TABLE IF NOT EXISTS auth_trusted_devices (
+    token_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_agent TEXT,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    last_used_at TIMESTAMPTZ
+  )`).catch(logSchemaError);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_auth_trusted_devices_user ON auth_trusted_devices(user_id)`
+  ).catch(logSchemaError);
+}
+
+// ——— 2FA dashboard ———
+
+async function createOtpChallenge(userId, codeHash, ttlMinutes) {
+  // Una challenge alla volta per utente: le precedenti non consumate decadono.
+  await pool.query(
+    `UPDATE auth_otp_challenges SET consumed_at = NOW()
+     WHERE user_id = $1 AND consumed_at IS NULL`,
+    [userId]
+  );
+  const r = await pool.query(
+    `INSERT INTO auth_otp_challenges (user_id, code_hash, expires_at)
+     VALUES ($1, $2, NOW() + ($3 || ' minutes')::interval)
+     RETURNING id`,
+    [userId, codeHash, String(Math.max(1, ttlMinutes || 10))]
+  );
+  return r.rows[0].id;
+}
+
+async function getOtpChallenge(challengeId) {
+  if (!challengeId) return null;
+  const r = await pool.query(
+    `SELECT * FROM auth_otp_challenges
+     WHERE id = $1 AND consumed_at IS NULL AND expires_at > NOW()`,
+    [challengeId]
+  ).catch(() => ({ rows: [] }));
+  return r.rows[0] || null;
+}
+
+async function bumpOtpAttempts(challengeId) {
+  const r = await pool.query(
+    `UPDATE auth_otp_challenges SET attempts = attempts + 1 WHERE id = $1 RETURNING attempts`,
+    [challengeId]
+  );
+  return r.rows[0]?.attempts ?? null;
+}
+
+async function consumeOtpChallenge(challengeId) {
+  await pool.query(
+    `UPDATE auth_otp_challenges SET consumed_at = NOW() WHERE id = $1`,
+    [challengeId]
+  );
+}
+
+async function createTrustedDevice(userId, tokenHash, userAgent, days) {
+  await pool.query(
+    `INSERT INTO auth_trusted_devices (token_hash, user_id, user_agent, expires_at)
+     VALUES ($1, $2, $3, NOW() + ($4 || ' days')::interval)
+     ON CONFLICT (token_hash) DO NOTHING`,
+    [tokenHash, userId, String(userAgent || '').slice(0, 300), String(Math.max(1, days || 30))]
+  );
+  // Pulizia opportunistica dei device scaduti e delle challenge vecchie.
+  await pool.query(`DELETE FROM auth_trusted_devices WHERE expires_at < NOW()`).catch(() => {});
+  await pool.query(`DELETE FROM auth_otp_challenges WHERE created_at < NOW() - INTERVAL '1 day'`).catch(() => {});
+}
+
+async function isTrustedDevice(userId, tokenHash) {
+  if (!userId || !tokenHash) return false;
+  const r = await pool.query(
+    `UPDATE auth_trusted_devices SET last_used_at = NOW()
+     WHERE token_hash = $1 AND user_id = $2 AND expires_at > NOW()
+     RETURNING token_hash`,
+    [tokenHash, userId]
+  ).catch(() => ({ rows: [] }));
+  return r.rows.length > 0;
+}
+
+async function revokeTrustedDevicesForUser(userId) {
+  await pool.query('DELETE FROM auth_trusted_devices WHERE user_id = $1', [userId]);
 }
 
 async function getMemberForPass(passId) {
@@ -4519,6 +4612,13 @@ module.exports = {
   updateMemberRecord,
   deleteMemberRecord,
   revokePass,
+  createOtpChallenge,
+  getOtpChallenge,
+  bumpOtpAttempts,
+  consumeOtpChallenge,
+  createTrustedDevice,
+  isTrustedDevice,
+  revokeTrustedDevicesForUser,
   importEmployeesBatch,
   updatePassDynamicLinks,
   clearPassDynamicLinks,

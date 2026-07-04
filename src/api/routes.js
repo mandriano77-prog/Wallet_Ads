@@ -1444,6 +1444,9 @@ router.put('/auth/change-password', async (req, res) => {
     const valid = await verifyPassword(current_password, fullUser.password_hash);
     if (!valid) return res.status(401).json({ error: 'Password attuale errata' });
     await updateUser(req.user.id, { password: new_password });
+    // Nuova password = i dispositivi fidati 2FA decadono.
+    const { revokeTrustedDevicesForUser } = require('../db');
+    await revokeTrustedDevicesForUser(req.user.id).catch(() => {});
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

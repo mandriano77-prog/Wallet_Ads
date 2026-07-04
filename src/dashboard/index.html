@@ -1468,6 +1468,17 @@
         <div class="form-group"><label class="form-label">Email</label><input type="email" id="loginEmail" autocomplete="username" placeholder="nome@azienda.it"></div>
         <div class="form-group"><label class="form-label">Password</label><input type="password" id="loginPassword" autocomplete="current-password"></div>
         <button type="button" class="btn" style="width:100%;margin-top:8px;" id="loginSubmitBtn" onclick="submitLogin()">Accedi</button>
+        <div id="loginOtpBlock" style="display:none;">
+          <div class="form-group" style="margin-top:12px;">
+            <label class="form-label" for="loginOtpCode">Codice di verifica</label>
+            <input type="text" id="loginOtpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123 456" style="text-align:center;font-size:20px;letter-spacing:4px;">
+            <p class="form-hint" id="loginOtpHint" style="margin:6px 0 0;"></p>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fd-color-text-muted,#64748b);cursor:pointer;margin:4px 0 0;">
+            <input type="checkbox" id="loginOtpRemember" checked style="margin:0;"> Non chiedere più su questo dispositivo per 30 giorni
+          </label>
+          <button type="button" class="btn" style="width:100%;margin-top:12px;" id="loginOtpBtn" onclick="submitLoginOtp()">Verifica e accedi</button>
+        </div>
         <p style="margin-top:14px;text-align:center;font-size:12px;">
             <button type="button" style="background:none;border:none;color:var(--teal);cursor:pointer;font-size:12px;padding:0;" onclick="showForgotPasswordPanel()">Password dimenticata?</button>
         </p>
@@ -4549,7 +4560,7 @@ async function submitLogin() {
         const res = await fetch(`${API}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, device_token: localStorage.getItem(DEVICE_TOKEN_KEY) || undefined })
         });
         let data = {};
         try { data = await res.json(); } catch (_) {}
@@ -4560,19 +4571,85 @@ async function submitLogin() {
             }
             return;
         }
-        localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-        authToken = data.token;
-        setCurrentUser(data.user);
-        syncAuthUi();
-        const gate = document.getElementById('loginGate');
-        const main = document.getElementById('mainLayout');
-        if (gate) gate.style.display = 'none';
-        if (main) main.style.display = 'grid';
-        if (isDashboardLoginPath()) leaveDashboardLoginUrl();
+        if (data.otp_required) {
+            loginOtpChallengeId = data.challenge_id;
+            const block = document.getElementById('loginOtpBlock');
+            const hint = document.getElementById('loginOtpHint');
+            const codeEl = document.getElementById('loginOtpCode');
+            if (block) block.style.display = 'block';
+            if (hint) hint.textContent = data.message || 'Controlla la tua email: ti abbiamo inviato un codice.';
+            if (btn) btn.style.display = 'none';
+            if (codeEl) { codeEl.value = ''; codeEl.focus(); }
+            return;
+        }
+        await completeDashboardLogin(data);
         pwEl.value = '';
-        await loadBrands();
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Accedi'; }
+    }
+}
+
+let loginOtpChallengeId = null;
+const DEVICE_TOKEN_KEY = 'fd_device_token';
+
+async function completeDashboardLogin(data) {
+    localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+    if (data.device_token) localStorage.setItem(DEVICE_TOKEN_KEY, data.device_token);
+    authToken = data.token;
+    setCurrentUser(data.user);
+    syncAuthUi();
+    const gate = document.getElementById('loginGate');
+    const main = document.getElementById('mainLayout');
+    if (gate) gate.style.display = 'none';
+    if (main) main.style.display = 'grid';
+    if (isDashboardLoginPath()) leaveDashboardLoginUrl();
+    const otpBlock = document.getElementById('loginOtpBlock');
+    if (otpBlock) otpBlock.style.display = 'none';
+    const loginBtn = document.getElementById('loginSubmitBtn');
+    if (loginBtn) loginBtn.style.display = '';
+    await loadBrands();
+}
+
+async function submitLoginOtp() {
+    const codeEl = document.getElementById('loginOtpCode');
+    const errEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginOtpBtn');
+    const code = (codeEl?.value || '').replace(/\s+/g, '');
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+    if (!code || !loginOtpChallengeId) {
+        if (errEl) { errEl.textContent = 'Inserisci il codice ricevuto via email'; errEl.style.display = 'block'; }
+        return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Verifica…'; }
+    try {
+        const res = await fetch(`${API}/auth/verify-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                challenge_id: loginOtpChallengeId,
+                code: code,
+                remember_device: !!document.getElementById('loginOtpRemember')?.checked
+            })
+        });
+        let data = {};
+        try { data = await res.json(); } catch (_) {}
+        if (!res.ok) {
+            if (errEl) { errEl.textContent = data.error || 'Codice non valido'; errEl.style.display = 'block'; }
+            if (/Rifai il login/i.test(data.error || '')) {
+                loginOtpChallengeId = null;
+                const block = document.getElementById('loginOtpBlock');
+                if (block) block.style.display = 'none';
+                const loginBtn = document.getElementById('loginSubmitBtn');
+                if (loginBtn) loginBtn.style.display = '';
+            }
+            return;
+        }
+        loginOtpChallengeId = null;
+        const pwEl = document.getElementById('loginPassword');
+        if (pwEl) pwEl.value = '';
+        await completeDashboardLogin(data);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Verifica e accedi'; }
     }
 }
 let currentBrandName = '';

@@ -747,6 +747,49 @@ async function sendScratchEmail({ to, name, brandName, brandColor, scratchUrl, c
 /**
  * Password reset link for dashboard users
  */
+async function sendLoginOtpEmail({ to, name, code, productTitle }) {
+  const resend = getResend();
+  if (!resend) {
+    console.log('⚠️ RESEND_API_KEY not set — skipping login OTP email to', to);
+    return { skipped: true, reason: 'RESEND_API_KEY not set' };
+  }
+
+  const product = dashboardEmailProductTitle(productTitle);
+  const displayName = String(name || '').trim() || String(to).split('@')[0];
+  const firstName = displayName.split(/\s+/)[0];
+  const safeCode = String(code || '').replace(/[^0-9]/g, '').slice(0, 6);
+  const prettyCode = `${safeCode.slice(0, 3)} ${safeCode.slice(3)}`;
+
+  const bodyHtml = `
+      <p style="color:${FD_DASHBOARD_EMAIL.textBody};font-size:15px;line-height:1.6;margin:0 0 16px;">
+        Ciao <strong style="color:${FD_DASHBOARD_EMAIL.textPrimary};">${firstName}</strong>,
+      </p>
+      <p style="color:${FD_DASHBOARD_EMAIL.textBody};font-size:15px;line-height:1.6;margin:0 0 8px;">
+        il tuo codice di accesso alla dashboard è:
+      </p>
+      <p style="text-align:center;margin:20px 0 24px;">
+        <span style="display:inline-block;background:${FD_DASHBOARD_EMAIL.bg};border:1px solid ${FD_DASHBOARD_EMAIL.border};border-radius:12px;padding:14px 26px;font-size:30px;font-weight:700;letter-spacing:6px;color:${FD_DASHBOARD_EMAIL.textPrimary};font-family:'SF Mono',Menlo,Consolas,monospace;">${prettyCode}</span>
+      </p>
+      <p style="color:${FD_DASHBOARD_EMAIL.textMuted};font-size:13px;line-height:1.6;margin:0;">
+        Il codice vale <strong>10 minuti</strong> e funziona una sola volta.
+      </p>`;
+
+  const html = filoDashboardEmailLayout({
+    productTitle: product,
+    headline: 'Il tuo codice di accesso',
+    subtitle: 'Verifica in due passaggi per la dashboard.',
+    bodyHtml,
+    footnote: 'Se non hai tentato di accedere tu, cambia subito la password: qualcuno conosce le tue credenziali.'
+  });
+
+  return sendViaResend({
+    from: `${getFromName()} <${getFromEmail()}>`,
+    to: [to],
+    subject: `${safeCode} è il tuo codice di accesso — ${product}`,
+    html
+  }, { logLabel: 'login OTP' });
+}
+
 async function sendPasswordResetEmail({ to, name, resetUrl, productTitle }) {
   const resend = getResend();
   if (!resend) {
@@ -995,6 +1038,7 @@ module.exports = {
   sendRecapEmail,
   sendScratchEmail,
   sendPasswordResetEmail,
+  sendLoginOtpEmail,
   sendActivationEmail,
   sendActivationReminderEmail,
   sendPassAccessEmail,
