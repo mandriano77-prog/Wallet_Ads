@@ -93,3 +93,13 @@ test('db: funzioni chiave API esportate', () => {
   ['createBrandApiKey', 'verifyBrandApiKey', 'getBrandApiKeyInfo', 'revokeBrandApiKeys']
     .forEach((fn) => assert.equal(typeof m[fn], 'function', fn));
 });
+
+test('catalogo provider completo (buoni pasto + welfare)', () => {
+  const types = availableProviders().map((p) => p.type);
+  ['edenred','pellegrini','satispay','coverflex','pluxee','day','repas','jointly','doubleyou']
+    .forEach((t) => assert.ok(types.includes(t), 'manca provider ' + t));
+  // Coverflex è welfare, Pluxee è buoni pasto.
+  const byType = Object.fromEntries(availableProviders().map((p) => [p.type, p.category]));
+  assert.equal(byType.coverflex, 'welfare');
+  assert.equal(byType.pluxee, 'buoni_pasto');
+});

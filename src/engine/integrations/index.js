@@ -6,11 +6,31 @@
  */
 'use strict';
 
-const ADAPTERS = {
+const { makePlaceholderAdapter } = require('./_placeholder');
+
+// Provider con adapter dedicato (logica specifica / commenti / futura API).
+const SPECIFIC = {
   edenred: require('./edenred'),
   pellegrini: require('./pellegrini'),
   satispay: require('./satispay'),
 };
+
+// Catalogo placeholder: i big del mercato IT (buoni pasto + welfare).
+// Aggiungere un provider = una riga qui. Modalità manuale/import finché non
+// esiste una API reale, poi si promuove a adapter dedicato.
+const PLACEHOLDERS = [
+  { type: 'coverflex', label: 'Coverflex', category: 'welfare' },
+  { type: 'pluxee', label: 'Pluxee', category: 'buoni_pasto' },
+  { type: 'day', label: 'Day', category: 'buoni_pasto' },
+  { type: 'repas', label: 'Repas', category: 'buoni_pasto' },
+  { type: 'jointly', label: 'Jointly', category: 'welfare' },
+  { type: 'doubleyou', label: 'Double You', category: 'welfare' },
+];
+
+const ADAPTERS = { ...SPECIFIC };
+for (const pl of PLACEHOLDERS) {
+  if (!ADAPTERS[pl.type]) ADAPTERS[pl.type] = makePlaceholderAdapter(pl);
+}
 
 /** Categorie note per raggruppare le card nel portale. */
 const CATEGORIES = Object.freeze({
