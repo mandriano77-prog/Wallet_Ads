@@ -100,7 +100,7 @@ test('catalogo provider completo (buoni pasto + welfare)', () => {
     .forEach((t) => assert.ok(types.includes(t), 'manca provider ' + t));
   // Coverflex è welfare, Pluxee è buoni pasto.
   const byType = Object.fromEntries(availableProviders().map((p) => [p.type, p.category]));
-  assert.equal(byType.coverflex, 'welfare');
+  assert.equal(byType.coverflex, 'fringe');
   assert.equal(byType.pluxee, 'buoni_pasto');
 });
 

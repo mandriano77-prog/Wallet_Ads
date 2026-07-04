@@ -210,7 +210,7 @@ router.get('/me/integrations', async (req, res) => {
     });
 
     // Raggruppa per categoria mantenendo l'ordine di CATEGORIES.
-    const order = ['ferie', 'buoni_pasto', 'welfare', 'mobilita', 'altro'];
+    const order = ['buoni_pasto', 'fringe', 'ferie', 'altro'];
     const groups = [];
     for (const cat of order) {
       const inCat = items.filter((i) => i.category === cat);

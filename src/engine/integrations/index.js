@@ -19,12 +19,12 @@ const SPECIFIC = {
 // Aggiungere un provider = una riga qui. Modalità manuale/import finché non
 // esiste una API reale, poi si promuove a adapter dedicato.
 const PLACEHOLDERS = [
-  { type: 'coverflex', label: 'Coverflex', category: 'welfare' },
+  { type: 'coverflex', label: 'Coverflex', category: 'fringe' },
   { type: 'pluxee', label: 'Pluxee', category: 'buoni_pasto' },
   { type: 'day', label: 'Day', category: 'buoni_pasto' },
   { type: 'repas', label: 'Repas', category: 'buoni_pasto' },
-  { type: 'jointly', label: 'Jointly', category: 'welfare' },
-  { type: 'doubleyou', label: 'Double You', category: 'welfare' },
+  { type: 'jointly', label: 'Jointly', category: 'fringe' },
+  { type: 'doubleyou', label: 'Double You', category: 'fringe' },
 ];
 
 const ADAPTERS = { ...SPECIFIC };
@@ -38,10 +38,9 @@ ADAPTERS.ferie = makePlaceholderAdapter({ type: 'ferie', label: 'Ferie e permess
 
 /** Categorie note per raggruppare le card nel portale. */
 const CATEGORIES = Object.freeze({
-  ferie: 'Ferie e permessi',
   buoni_pasto: 'Buoni pasto',
-  welfare: 'Welfare',
-  mobilita: 'Mobilità',
+  fringe: 'Fringe benefit',
+  ferie: 'Ferie e permessi',
   altro: 'Altri servizi',
 });
 

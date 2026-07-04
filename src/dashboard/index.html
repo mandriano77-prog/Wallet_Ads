@@ -1522,7 +1522,6 @@
                     <div class="nav-item" onclick="nav('instant-win')" data-section-id="instant-win" data-requires-perm="rewards" role="button" tabindex="0">Reward</div>
                     <div class="nav-item" onclick="nav('gamification')" data-section-id="gamification" data-requires-perm="challenges" role="button" tabindex="0">Challenge</div>
                     <div class="nav-item fd-nav-item--hr" onclick="nav('conventions')" data-section-id="conventions" data-requires-perm="conventions" role="button" tabindex="0">Convenzioni</div>
-                    <div class="nav-item fd-nav-item--hr" onclick="nav('extra')" data-section-id="extra" data-requires-perm="conventions" role="button" tabindex="0">EXTRA</div>
                     <div class="nav-item fd-nav-item--hr" onclick="nav('pga-catalog')" data-section-id="pga-catalog" data-requires-perm="pga_catalog" role="button" tabindex="0">PGA Catalog</div>
                     <div class="nav-item fd-nav-item--hr" onclick="nav('pga-engagement')" data-section-id="pga-engagement" data-requires-perm="pga_engagement" role="button" tabindex="0">Engagement Coin</div>
                 </div>
@@ -1539,6 +1538,7 @@
             <details class="nav-group nav-group--setup" data-nav-group="setup" open>
                 <summary class="nav-group-label">Setup</summary>
                 <div class="nav-group-items">
+                    <div class="nav-item fd-nav-item--hr" onclick="nav('extra')" data-section-id="extra" data-requires-perm="conventions" data-role-min="manager" role="button" tabindex="0">Integrazioni</div>
                     <div class="nav-item" onclick="nav('users')" data-section-id="users" data-requires-perm="users" data-role-min="manager" role="button" tabindex="0">Utenti</div>
                 </div>
             </details>
@@ -3232,8 +3232,8 @@
 
             <!-- EXTRA — Integrazioni (fringe benefit / welfare) -->
             <div id="extra" class="section" data-rbac-section="conventions" hidden aria-hidden="true">
-                <h1 class="sec-title page-title">EXTRA</h1>
-                <p style="color:var(--text2);font-size:13px;margin-bottom:16px;max-width:60ch;">Abilita i servizi terzi (fringe benefit e welfare) che i dipendenti già usano: compaiono nella sezione EXTRA del loro portale. I dati reali (es. saldo buoni pasto) arrivano quando l'API del provider è collegata.</p>
+                <h1 class="sec-title page-title">Integrazioni</h1>
+                <p style="color:var(--text2);font-size:13px;margin-bottom:16px;max-width:64ch;">Abilita i servizi che i dipendenti già usano — buoni pasto, fringe benefit, ferie e permessi: compaiono nella sezione <strong>EXTRA</strong> del loro portale e sul retro del pass. I dati si caricano via CSV o API dal gestionale.</p>
                 <div id="extraAdminList" style="display:grid;gap:12px;max-width:640px;"></div>
                 <div style="margin-top:16px;">
                     <button type="button" class="btn" id="extraSaveBtn" onclick="saveExtraConfig()">Salva integrazioni</button>
@@ -8941,30 +8941,35 @@ async function loadExtraAdmin() {
     }
 }
 
-const EXTRA_CATEGORIES = { ferie: 'Ferie e permessi', buoni_pasto: 'Buoni pasto', welfare: 'Welfare', mobilita: 'Mobilità', altro: 'Altri servizi' };
+const EXTRA_CATEGORIES = { buoni_pasto: 'Buoni pasto', fringe: 'Fringe benefit', ferie: 'Ferie e permessi', altro: 'Altri servizi' };
 
 function renderExtraAdmin(providers, active) {
     const host = document.getElementById('extraAdminList');
     if (!host) return;
     if (!providers.length) { host.innerHTML = '<p style="color:var(--text2)">Nessun provider disponibile.</p>'; return; }
-    host.innerHTML = providers.map(pr => {
-        const cur = active.get(pr.type) || {};
-        const on = cur.enabled === true;
-        const cat = cur.category || pr.category || 'altro';
-        const catOpts = Object.entries(EXTRA_CATEGORIES).map(([k,v]) =>
-            `<option value="${k}"${k===cat?' selected':''}>${v}</option>`).join('');
-        const importBtn = on
-            ? `<button type="button" class="btn small sec" onclick="openExtraImport('${pr.type}','${esc(cur.label || pr.label)}')">Importa dati dipendenti</button>`
-            : '';
-        return `<div class="card" style="padding:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;" data-extra-type="${pr.type}">
-            <label style="display:flex;align-items:center;gap:10px;flex:1;min-width:180px;cursor:pointer;">
-                <input type="checkbox" data-extra-enabled ${on?'checked':''}>
-                <strong>${esc(cur.label || pr.label)}</strong>
-            </label>
-            <select data-extra-category style="max-width:150px;">${catOpts}</select>
-            ${importBtn}
-        </div>`;
-    }).join('');
+    // Raggruppa per macro-sezione: Buoni pasto · Fringe benefit · Ferie e permessi.
+    const order = ['buoni_pasto', 'fringe', 'ferie', 'altro'];
+    let html = '';
+    order.forEach(cat => {
+        const inCat = providers.filter(pr => (pr.category || 'altro') === cat);
+        if (!inCat.length) return;
+        html += `<h2 class="block-title" style="font-size:14px;margin:20px 0 10px;">${esc(EXTRA_CATEGORIES[cat] || cat)}</h2>`;
+        html += '<div style="display:grid;gap:10px;">' + inCat.map(pr => {
+            const cur = active.get(pr.type) || {};
+            const on = cur.enabled === true;
+            const importBtn = on
+                ? `<button type="button" class="btn small sec" onclick="openExtraImport('${pr.type}','${esc(cur.label || pr.label)}')">Importa dati dipendenti</button>`
+                : '';
+            return `<div class="card" style="padding:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;" data-extra-type="${pr.type}" data-extra-cat="${cat}">
+                <label style="display:flex;align-items:center;gap:10px;flex:1;min-width:180px;cursor:pointer;">
+                    <input type="checkbox" data-extra-enabled ${on?'checked':''}>
+                    <strong>${esc(cur.label || pr.label)}</strong>
+                </label>
+                ${importBtn}
+            </div>`;
+        }).join('') + '</div>';
+    });
+    host.innerHTML = html;
 }
 
 async function saveExtraConfig() {
@@ -8974,7 +8979,7 @@ async function saveExtraConfig() {
     rows.forEach(row => {
         const type = row.getAttribute('data-extra-type');
         const enabled = row.querySelector('[data-extra-enabled]')?.checked;
-        const category = row.querySelector('[data-extra-category]')?.value || 'altro';
+        const category = row.getAttribute('data-extra-cat') || 'altro';
         const prov = (extraProvidersCache || []).find(p => p.type === type) || {};
         integrations.push({ type, enabled: !!enabled, category, label: prov.label, mode: 'manual' });
     });

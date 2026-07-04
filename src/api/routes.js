@@ -3001,7 +3001,7 @@ router.put('/brands/:id/integrations', async (req, res) => {
       const entry = {
         type: adapter.type,
         label: String(it.label || adapter.defaultLabel || adapter.type).slice(0, 80),
-        category: ['ferie', 'buoni_pasto', 'welfare', 'mobilita', 'altro'].includes(it.category)
+        category: ['buoni_pasto', 'fringe', 'ferie', 'altro'].includes(it.category)
           ? it.category : (adapter.defaultCategory || 'altro'),
         enabled: it.enabled !== false,
         mode,
