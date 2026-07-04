@@ -43,7 +43,7 @@ ADAPTERS.fringe_benefit = makePlaceholderAdapter({ type: 'fringe_benefit', label
 /** Categorie note per raggruppare le card nel portale. */
 const CATEGORIES = Object.freeze({
   buoni_pasto: 'Buoni pasto',
-  fringe: 'Fringe benefit',
+  fringe: 'Crediti aziendali',
   ferie: 'Ferie e permessi',
   altro: 'Altri servizi',
 });
