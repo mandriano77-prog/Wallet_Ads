@@ -157,7 +157,12 @@ async function executeWalletPush(body, ctx = {}) {
     back_details,
     screen_alert,
     test_pass_id,
+    carrier,
   } = body;
+
+  // Esperimento carrier retro (stile MdM): changeMessage su back field, fronte
+  // intatto (niente cerchietto). Solo su invii di prova finché non validato.
+  const backCarrier = carrier === 'back' && !!test_pass_id;
 
   if (!brand_id) {
     throw new Error('brand_id richiesto');
@@ -253,6 +258,7 @@ async function executeWalletPush(body, ctx = {}) {
         message: effectiveMessage,
         ts: Date.now(),
         ...(screenText ? { screen_alert: screenText.slice(0, require('./push-text-limits').PUSH_SCREEN_ALERT_MAX) } : {}),
+        ...(backCarrier ? { carrier: 'back' } : {}),
       },
       back_details
     );

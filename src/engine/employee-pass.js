@@ -237,6 +237,12 @@ function mergePushAlertIntoHeaderHint(headerHint, pushAnn) {
   if (!alertText) {
     return { headerHint: headerHint || null, pushAlert: null };
   }
+  // Esperimento carrier retro: la notifica viaggia su un back field
+  // (buildBackSections), il fronte resta identico — nessun token, nessun
+  // cerchietto. Attivo solo su invii di prova (push-dispatch).
+  if (pushAnn?.carrier === 'back') {
+    return { headerHint: headerHint || null, pushAlert: null };
+  }
   const pushTs = Number(pushAnn?.ts || Date.now());
   const token = invisibleChangeToken(pushTs).slice(0, 12);
 
@@ -418,6 +424,24 @@ function buildBackSections({ brand, template, instance, member, brandConfig = {}
   const sections = [];
   const hrBack = resolveHrBackSource(template, brand);
   const pushAnn = resolvePushAnnouncement(brandConfig, instance);
+
+  // Esperimento carrier retro (stile Maisons du Monde): il testo notifica vive
+  // su un back field visibile; value = testo + token invisibile (cambia a ogni
+  // push), changeMessage = '%@' (iOS mostra il valore). Il fronte non cambia
+  // → nessun cerchietto. Solo invii di prova finché non validato su iPhone.
+  if (pushAnn?.carrier === 'back') {
+    const alertText = String(pushAnn.screen_alert || pushAnn.message || '').trim();
+    if (alertText) {
+      const token = invisibleChangeToken(Number(pushAnn.ts || Date.now())).slice(0, 12);
+      sections.push({
+        kind: 'alert',
+        key: 'announcement_back',
+        label: String(pushAnn.title || '').trim().toUpperCase().slice(0, 64) || ' ',
+        body: alertText.slice(0, 400) + token,
+        changeMessage: '%@',
+      });
+    }
+  }
 
   // Messaggio geofencing: PRIMA cosa visibile girando il pass (prima dei link
   // HUB/Supporto/Area privata). Testo fisso, senza changeMessage → aggiornamento

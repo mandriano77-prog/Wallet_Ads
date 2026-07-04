@@ -25,6 +25,9 @@ function parsePushAnnouncementRecord(raw) {
   };
   if (screen) out.screen_alert = screen.slice(0, require('./push-text-limits').PUSH_SCREEN_ALERT_MAX);
   if (backRaw) out.back_details = backRaw.slice(0, 500);
+  // Esperimento carrier retro (solo invii di prova): la notifica viaggia su un
+  // back field, il fronte non cambia.
+  if (ann.carrier === 'back') out.carrier = 'back';
   return out;
 }
 
