@@ -10542,9 +10542,6 @@
 
     if (window.pushStripMediaId) body.strip_media_id = window.pushStripMediaId;
     if (extra.test_pass_id) body.test_pass_id = extra.test_pass_id;
-    if (extra.test_pass_id && document.getElementById('fdPushBackCarrier')?.checked) {
-      body.carrier = 'back';
-    }
     return body;
   }
 
@@ -10896,9 +10893,7 @@
       '<div class="fd-push-test__row">' +
       '<select id="fdPushTestPass" aria-label="Pass di prova"></select>' +
       '<button type="button" class="fd-btn fd-btn--secondary" id="fdPushTestBtn">Invia di prova</button>' +
-      '</div>' +
-      '<label class="form-hint" style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer">' +
-      '<input type="checkbox" id="fdPushBackCarrier" style="margin:0"> Sperimentale: notifica dal retro (niente pallino sul fronte)</label>';
+      '</div>';
     var sendBtn = card.querySelector('button[onclick*="sendImmediatePush"]');
     if (sendBtn) card.insertBefore(block, sendBtn);
     else card.appendChild(block);
