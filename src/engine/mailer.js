@@ -747,64 +747,114 @@ async function sendScratchEmail({ to, name, brandName, brandColor, scratchUrl, c
 /**
  * Password reset link for dashboard users
  */
-async function sendPushReportEmail({ to, brandName, title, screenAlert, origin, outcome, productTitle }) {
+function buildPushReportEmail({ brandName, title, screenAlert, origin, outcome, productTitle }) {
   const product = dashboardEmailProductTitle(productTitle);
   const o = outcome || {};
-  const statusEmoji = o.hasErrors ? '⚠️' : '✅';
-  const statusLabel = o.hasErrors ? 'con errori' : 'consegnata';
+  const T = FD_DASHBOARD_EMAIL;
 
-  const row = (label, value) => `
+  // Diagnosi PER CANALE (mai messaggi Apple per errori Google e viceversa).
+  const appleFailed = (o.apnsTotal || 0) > 0 && (o.apnsSent || 0) === 0;
+  const googleErrors = Number(o.gw?.errors || 0);
+  const ok = !o.hasErrors;
+
+  const heroBg = ok ? '#ecfdf5' : '#fffbeb';
+  const heroBorder = ok ? 'rgba(16,185,129,.35)' : 'rgba(245,158,11,.55)';
+  const heroColor = ok ? '#047857' : '#a16207';
+  const heroLabel = ok ? 'Consegnata' : 'Da verificare';
+  const dotOk = '#10b981', dotOff = '#cbd5e1', dotErr = '#dc2626';
+
+  const channelRow = (name, value, dot) => `
       <tr>
-        <td style="padding:8px 0;color:${FD_DASHBOARD_EMAIL.textMuted};font-size:14px;border-bottom:1px solid ${FD_DASHBOARD_EMAIL.border};">${label}</td>
-        <td style="padding:8px 0;color:${FD_DASHBOARD_EMAIL.textPrimary};font-size:14px;font-weight:600;text-align:right;border-bottom:1px solid ${FD_DASHBOARD_EMAIL.border};">${value}</td>
+        <td style="padding:11px 0;border-bottom:1px solid ${T.border};font-size:14px;color:${T.textBody};">
+          <span style="display:inline-block;width:9px;height:9px;border-radius:99px;background:${dot};margin-right:9px;"></span>${name}
+        </td>
+        <td style="padding:11px 0;border-bottom:1px solid ${T.border};font-size:14px;font-weight:600;color:${T.textPrimary};text-align:right;">${value}</td>
       </tr>`;
 
-  let rows = row('iPhone (Apple Wallet)', `${o.apnsSent || 0}/${o.apnsTotal || 0} consegnate`);
+  let rows = channelRow(
+    'iPhone · Apple Wallet',
+    `${o.apnsSent || 0}/${o.apnsTotal || 0} consegnate`,
+    (o.apnsTotal || 0) === 0 ? dotOff : (appleFailed ? dotErr : dotOk)
+  );
   rows += o.gw?.skipped
-    ? row('Google Wallet', 'non configurato')
-    : row('Google Wallet', `${o.gw?.updated || 0} pass aggiornati${(o.gw?.errors || 0) > 0 ? ` — ${o.gw.errors} errori` : ''}`);
+    ? channelRow('Google Wallet', 'non configurato', dotOff)
+    : channelRow('Google Wallet', `${o.gw?.updated || 0} aggiornati${googleErrors ? ` · ${googleErrors} errori` : ''}`, googleErrors ? dotErr : ((o.gw?.updated || 0) > 0 ? dotOk : dotOff));
   if (o.sam && !o.sam.skipped) {
-    rows += row('Samsung Wallet', `${o.sam.notified || 0}/${o.sam.attempted || 0} notificati`);
+    rows += channelRow('Samsung Wallet', `${o.sam.notified || 0}/${o.sam.attempted || 0} notificati`, (o.sam.notified || 0) > 0 ? dotOk : dotOff);
   }
 
-  let errorsHtml = '';
+  // Sezione problemi: solo i canali che hanno davvero fallito.
+  const problems = [];
+  if (appleFailed) problems.push('<strong>Apple:</strong> invio partito ma nessuna consegna — controlla certificati APNs e device registrati.');
+  if (googleErrors) problems.push(`<strong>Google:</strong> ${googleErrors} aggiornament${googleErrors === 1 ? 'o' : 'i'} fallit${googleErrors === 1 ? 'o' : 'i'} — verifica che il pass Google esista ancora (oggetto eliminato o scaduto?).`);
   if ((o.failures || []).length) {
-    const items = o.failures.slice(0, 10)
-      .map((f) => `${String(f.token || '').slice(0, 16)}…: ${f.reason || f.error || 'unknown'}`)
+    const items = o.failures.slice(0, 8)
+      .map((f) => `<span style="font-family:'SF Mono',Menlo,monospace;font-size:12px;">${String(f.token || '').slice(0, 14)}…</span> ${f.reason || f.error || 'unknown'}`)
       .join('<br>');
-    errorsHtml = `
-      <div style="margin:16px 0 0;padding:12px 14px;border-radius:10px;background:#fef2f2;color:#dc2626;font-size:13px;line-height:1.6;">
-        <strong>Errori APNs (${o.failures.length})</strong><br>${items}
-      </div>`;
-  } else if (o.hasErrors) {
-    errorsHtml = `
-      <div style="margin:16px 0 0;padding:12px 14px;border-radius:10px;background:#fffbeb;color:#a16207;font-size:13px;line-height:1.6;">
-        Invio partito ma senza consegne Apple: controlla certificati APNs e device registrati.
-      </div>`;
+    problems.push(`<strong>Dettaglio APNs (${o.failures.length}):</strong><br>${items}`);
   }
+  const problemsHtml = problems.length
+    ? `<div style="margin:18px 0 0;padding:14px 16px;border-radius:10px;background:#fef2f2;border:1px solid rgba(220,38,38,.25);color:#b91c1c;font-size:13px;line-height:1.7;">${problems.join('<br><br>')}</div>`
+    : '';
 
-  const bodyHtml = `
-      <p style="color:${FD_DASHBOARD_EMAIL.textBody};font-size:15px;line-height:1.6;margin:0 0 6px;">
-        <strong style="color:${FD_DASHBOARD_EMAIL.textPrimary};">${brandName}</strong> — push ${origin === 'programmata' ? 'programmata' : 'manuale'}
-      </p>
-      <p style="color:${FD_DASHBOARD_EMAIL.textMuted};font-size:13px;line-height:1.6;margin:0 0 16px;">
-        «${String(screenAlert || title || '').slice(0, 140)}»
-      </p>
-      <table style="width:100%;border-collapse:collapse;">${rows}</table>
-      ${errorsHtml}`;
+  const domain = String(process.env.CUSTOM_DOMAIN || '').trim();
+  const dashUrl = domain ? `https://${domain.replace(/^https?:\/\//, '')}/dashboard` : null;
 
-  const html = filoDashboardEmailLayout({
-    productTitle: product,
-    headline: `${statusEmoji} Push ${statusLabel} — ${o.delivered || 0} consegne`,
-    subtitle: 'Report automatico di consegna.',
-    bodyHtml,
-    footnote: 'Ricevi questo report dopo ogni invio push. Per cambiarne il destinatario: brand.config.push_report_email.'
-  });
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:${T.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+    <div style="background:${T.card};border-radius:${T.radius};padding:28px 24px;border:1px solid ${T.border};box-shadow:${T.shadow};">
+      ${filoDashboardEmailWordmark(product)}
 
+      <div style="margin:22px 0 0;padding:18px 20px;border-radius:12px;background:${heroBg};border:1px solid ${heroBorder};">
+        <table style="width:100%;border-collapse:collapse;"><tr>
+          <td>
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${heroColor};">Push ${heroLabel}</div>
+            <div style="font-size:15px;font-weight:600;color:${T.textPrimary};margin-top:4px;">${brandName}</div>
+            <div style="font-size:12px;color:${T.textMuted};margin-top:2px;">Invio ${origin === 'programmata' ? 'programmato' : 'manuale'} · report automatico</div>
+          </td>
+          <td style="text-align:right;vertical-align:middle;">
+            <div style="font-size:34px;font-weight:800;color:${heroColor};line-height:1;">${o.delivered || 0}</div>
+            <div style="font-size:11px;color:${T.textMuted};">${(o.delivered || 0) === 1 ? 'consegna' : 'consegne'}</div>
+          </td>
+        </tr></table>
+      </div>
+
+      <div style="margin:18px 0 0;padding:12px 16px;border-left:3px solid ${T.primary};background:${T.bg};border-radius:0 8px 8px 0;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:${T.textMuted};margin-bottom:3px;">Notifica inviata</div>
+        <div style="font-size:14px;color:${T.textPrimary};line-height:1.5;">${String(screenAlert || title || '').slice(0, 160)}</div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;margin-top:14px;">${rows}</table>
+      ${problemsHtml}
+
+      ${dashUrl ? `<p style="text-align:center;margin:24px 0 4px;">
+        <a href="${dashUrl}" style="display:inline-block;background:${T.primary};color:#fff;font-weight:600;font-size:14px;padding:12px 26px;border-radius:${T.btnRadius};text-decoration:none;box-shadow:${T.btnShadow};">Apri la dashboard →</a>
+      </p>` : ''}
+    </div>
+    <p style="color:${T.textFooter};font-size:12px;text-align:center;margin:16px 0 0;line-height:1.6;">
+      Report inviato a chi gestisce ${brandName} e agli admin, dopo ogni invio push.<br>Powered by ${product}
+    </p>
+  </div>
+</body>
+</html>`;
+
+  const statusEmoji = ok ? '\u2705' : '\u26a0\ufe0f';
+  const problemHint = !ok
+    ? (appleFailed && googleErrors ? ' — errori Apple e Google' : appleFailed ? ' — verifica Apple' : googleErrors ? ' — verifica Google' : ' — verifica errori')
+    : '';
+  const subject = `${statusEmoji} ${brandName} — push ${ok ? 'consegnata' : 'da verificare'} (${o.delivered || 0} ${(o.delivered || 0) === 1 ? 'consegna' : 'consegne'})${problemHint}`;
+  return { html, subject };
+}
+
+async function sendPushReportEmail({ to, brandName, title, screenAlert, origin, outcome, productTitle }) {
+  const { html, subject } = buildPushReportEmail({ brandName, title, screenAlert, origin, outcome, productTitle });
   return sendViaResend({
     from: `${getFromName()} <${getFromEmail()}>`,
     to: Array.isArray(to) ? to : [to],
-    subject: `${statusEmoji} Push ${statusLabel} — ${brandName}: ${o.delivered || 0} consegne${o.hasErrors ? ' (VERIFICA ERRORI)' : ''}`,
+    subject,
     html
   }, { logLabel: 'push report' });
 }
@@ -1102,6 +1152,7 @@ module.exports = {
   sendPasswordResetEmail,
   sendLoginOtpEmail,
   sendPushReportEmail,
+  buildPushReportEmail,
   sendActivationEmail,
   sendActivationReminderEmail,
   sendPassAccessEmail,

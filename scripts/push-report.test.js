@@ -5,6 +5,7 @@ const assert = require('node:assert');
 const test = require('node:test');
 
 const { summarizeOutcome, resolveReportRecipients } = require('../src/engine/push-report');
+const { buildPushReportEmail } = require('../src/engine/mailer');
 
 test('summarizeOutcome: invio pulito', () => {
   const o = summarizeOutcome({
@@ -44,4 +45,25 @@ test('resolveReportRecipients: include config brand + allowlist, dedup e solo em
   assert.ok(list.includes('hr@azienda.it'), 'config brand presente (lowercased)');
   assert.ok(list.every((e) => e.includes('@')), 'solo email valide');
   assert.equal(new Set(list).size, list.length, 'nessun duplicato');
+});
+
+test('template: errore Google NON mostra la diagnosi Apple (e viceversa)', () => {
+  const { html, subject } = buildPushReportEmail({
+    brandName: 'Meridia', screenAlert: 'Vinci 50 Coin', origin: 'manuale',
+    outcome: { apnsSent: 1, apnsTotal: 1, gw: { updated: 0, errors: 1 }, failures: [], delivered: 1, hasErrors: true },
+  });
+  assert.ok(html.includes('Google:'), 'diagnosi Google presente');
+  assert.ok(!html.includes('controlla certificati APNs'), 'nessuna diagnosi Apple se Apple ha consegnato');
+  assert.ok(subject.includes('verifica Google'), 'oggetto punta al canale giusto');
+  assert.ok(subject.includes('1 consegna'), 'singolare corretto');
+});
+
+test('template: invio pulito senza box problemi', () => {
+  const { html, subject } = buildPushReportEmail({
+    brandName: 'Meridia', screenAlert: 'Buon weekend!', origin: 'programmata',
+    outcome: { apnsSent: 42, apnsTotal: 43, gw: { updated: 7, errors: 0 }, failures: [], delivered: 49, hasErrors: false },
+  });
+  assert.ok(!html.includes('fef2f2'), 'nessun box rosso');
+  assert.ok(subject.startsWith('\u2705'), 'oggetto con check verde');
+  assert.ok(html.includes('Invio programmato'), 'origine visibile');
 });
