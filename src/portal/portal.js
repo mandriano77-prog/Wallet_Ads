@@ -63,10 +63,8 @@
   let portalToken = new URLSearchParams(window.location.search).get('t') || '';
   let profile = null;
   let consents = [];
-  let pushHistory = null;
   let consentLog = [];
   let extraLoaded = false;
-  let pushFilter = 'all';
   let consentSaving = false;
 
   const $ = (sel) => document.querySelector(sel);
@@ -508,103 +506,7 @@
       .join('');
   }
 
-  function categorizePush(item) {
-    const text = ((item.title || '') + ' ' + (item.message || '')).toLowerCase();
-    if (/welfare|convenz|palestr|fit|sconto|map|geo/.test(text)) return 'welfare';
-    if (/quiz|compleann|engagement|sondag|pulse|game|trophy|gift/.test(text)) return 'engagement';
-    return 'service';
-  }
 
-  function renderPushHistory() {
-    const summary = pushHistory?.pass_summary;
-    const items = pushHistory?.brand_broadcasts || [];
-
-    if (summary) {
-      const status = summary.last_push_status || '—';
-      const when = summary.last_push_at ? formatDateTime(summary.last_push_at) : '—';
-      $('#pass-push-summary').innerHTML =
-        'Sul tuo dispositivo: <strong>' +
-        esc(String(summary.push_count || 0)) +
-        '</strong> push APNs · ultima: ' +
-        esc(when) +
-        ' (' +
-        esc(status) +
-        ')';
-    } else {
-      $('#pass-push-summary').textContent = '';
-    }
-
-    const filtered =
-      pushFilter === 'all' ? items : items.filter((i) => categorizePush(i) === pushFilter);
-
-    const counts = {
-      all: items.length,
-      service: items.filter((i) => categorizePush(i) === 'service').length,
-      engagement: items.filter((i) => categorizePush(i) === 'engagement').length,
-      welfare: items.filter((i) => categorizePush(i) === 'welfare').length
-    };
-
-    const filters = [
-      { id: 'all', label: 'Tutte' },
-      { id: 'service', label: 'Servizio' },
-      { id: 'engagement', label: 'Engagement' },
-      { id: 'welfare', label: 'Welfare' }
-    ];
-
-    $('#push-filters').innerHTML = filters
-      .map(
-        (f) =>
-          '<button type="button" class="filter-chip' +
-          (pushFilter === f.id ? ' active' : '') +
-          '" data-filter="' +
-          f.id +
-          '">' +
-          esc(f.label) +
-          ' · ' +
-          counts[f.id] +
-          '</button>'
-      )
-      .join('');
-
-    $('#push-filters').querySelectorAll('.filter-chip').forEach((chip) => {
-      chip.addEventListener('click', () => {
-        pushFilter = chip.getAttribute('data-filter');
-        renderPushHistory();
-        refreshIcons();
-      });
-    });
-
-    const list = $('#push-list');
-    if (!filtered.length) {
-      list.innerHTML = '<div class="empty-state">Nessuna push negli ultimi invii del brand.</div>';
-      return;
-    }
-
-    list.innerHTML = filtered
-      .map((p) => {
-        const cat = categorizePush(p);
-        const icon =
-          cat === 'welfare' ? 'map-pin' : cat === 'engagement' ? 'gift' : 'bell';
-        return (
-          '<div class="push-item">' +
-          '<div class="push-icon cat-' +
-          cat +
-          '"><i data-lucide="' +
-          icon +
-          '"></i></div>' +
-          '<div class="push-body">' +
-          '<div class="head"><span class="title">' +
-          esc(p.title) +
-          '</span><span class="time">' +
-          esc(formatDateTime(p.created_at)) +
-          '</span></div>' +
-          '<div class="text">' +
-          esc(p.message) +
-          '</div></div></div>'
-        );
-      })
-      .join('');
-  }
 
   function refreshIcons() {
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
@@ -622,7 +524,6 @@
           p.classList.toggle('active', p.getAttribute('data-page') === page);
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        if (page === 'push' && !pushHistory) loadPushHistory();
         if (page === 'dati' && !consentLog.length) loadConsentLog();
         if (page === 'extra' && !extraLoaded) loadExtra();
       });
@@ -736,16 +637,6 @@
     }
   }
 
-  async function loadPushHistory() {
-    try {
-      pushHistory = await apiJson('/me/push-history');
-      renderPushHistory();
-      refreshIcons();
-    } catch (err) {
-      $('#push-list').innerHTML =
-        '<div class="empty-state">' + esc(err.message) + '</div>';
-    }
-  }
 
   async function submitGdpr(type) {
     const action = GDPR_ACTIONS.find((a) => a.type === type);

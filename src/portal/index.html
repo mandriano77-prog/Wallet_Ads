@@ -42,7 +42,6 @@
       <div class="nav-item" data-page="consensi"><i data-lucide="sliders-horizontal"></i> I miei consensi</div>
       <div class="nav-item" data-page="dati"><i data-lucide="user"></i> I miei dati</div>
       <div class="nav-item" data-page="extra"><i data-lucide="gift"></i> EXTRA</div>
-      <div class="nav-item" data-page="push"><i data-lucide="bell"></i> Storico push</div>
       <div class="sidebar-footer">
         <span id="session-info">Sessione attiva</span><br>
         <button type="button" class="exit-link" id="btn-exit">Esci</button>
@@ -120,25 +119,14 @@
           <div class="card-title"><h3>Storico modifiche ai consensi</h3></div>
           <div class="log" id="consent-log"></div>
         </div>
-      </section>
-
-      <section class="page" data-page="push">
-        <div class="page-head">
-          <div class="breadcrumb">Profilo · Storico push</div>
-          <h1>Le push che hai ricevuto.</h1>
-          <p>Comunicazioni inviate dalla tua azienda al pass (broadcast brand + stato sul tuo dispositivo).</p>
-        </div>
-        <div class="pass-summary" id="pass-push-summary"></div>
-        <div class="filter-row" id="push-filters"></div>
-        <div class="card" style="padding:0 var(--space-5);">
-          <div class="push-list" id="push-list"></div>
-        </div>
         <div class="danger-zone">
           <h4>Disinstalla il pass</h4>
-          <p>Se rimuovi il pass dal tuo wallet smetterai di ricevere comunicazioni. I tuoi dati restano in azienda secondo le policy del datore di lavoro. Per cancellarli definitivamente usa <em>Richiedi cancellazione</em> in I miei dati.</p>
+          <p>Se rimuovi il pass dal tuo wallet smetterai di ricevere comunicazioni. I tuoi dati restano in azienda secondo le policy del datore di lavoro. Per cancellarli definitivamente usa <em>Richiedi cancellazione</em> qui sopra.</p>
           <button type="button" class="btn btn-danger" id="btn-uninstall"><i data-lucide="x-circle"></i> Disinstalla pass</button>
         </div>
       </section>
+
+      
       <section class="page" data-page="extra">
         <div class="page-head">
           <div class="breadcrumb">Profilo · EXTRA</div>
