@@ -13,21 +13,39 @@ const {
   logEvent,
 } = require('../db');
 
+const { isHrBrand, resolveHrGamePlayer, creditHrGameWin } = require('../engine/game-hr');
+
 const router = express.Router();
+
+function serialPassForInfo(pass) { return pass; }
 
 router.post('/play/:serial_number', async (req, res) => {
   try {
     const { serial_number } = req.params;
-    const { campaign_id, player_email, player_phone, player_first_name, player_last_name, privacy_accepted } = req.body;
-
-    // Validate player data (required before playing)
-    if (!player_email || !player_first_name || !player_last_name) {
-      return res.status(400).json({ error: 'Compila tutti i campi obbligatori (nome, cognome, email)' });
-    }
+    let { campaign_id, player_email, player_phone, player_first_name, player_last_name, privacy_accepted } = req.body;
 
     // Find the pass by serial
     const pass = await getPassBySerial(serial_number);
     if (!pass) return res.status(404).json({ error: 'Pass non trovato' });
+
+    // HR: il dipendente è già identificato dal pass — niente form lead-gen.
+    const playBrand = await getBrand(pass.brand_id);
+    const hrDeploy = isHrBrand(playBrand);
+    if (hrDeploy) {
+      const hrPlayer = await resolveHrGamePlayer(pass);
+      if (hrPlayer) {
+        player_first_name = hrPlayer.player_first_name || player_first_name;
+        player_last_name = hrPlayer.player_last_name || player_last_name;
+        player_email = hrPlayer.player_email || player_email;
+        player_phone = hrPlayer.player_phone || player_phone;
+        privacy_accepted = true; // consenso già raccolto in attivazione pass
+      }
+    }
+
+    // Validate player data (required before playing — solo flusso Ads/lead)
+    if (!hrDeploy && (!player_email || !player_first_name || !player_last_name)) {
+      return res.status(400).json({ error: 'Compila tutti i campi obbligatori (nome, cognome, email)' });
+    }
 
     // Get campaign
     const campaign = await getInstantWinCampaign(campaign_id);
@@ -101,11 +119,25 @@ router.post('/play/:serial_number', async (req, res) => {
       metadata: { campaign_id, game_type: campaign.game_type, prize_name: play.prize_name }
     });
 
+    // HR: vincita → coin accreditati in automatico + pass aggiornato.
+    let coinAward = null;
+    if (hrDeploy && result === 'win') {
+      coinAward = await creditHrGameWin({
+        brand: playBrand,
+        pass,
+        campaign,
+        prizeName: campaign.prize_name,
+        playId: play.id,
+        source: 'instant_win',
+      }).catch((e) => { console.warn('[play] accredito coin fallito:', e.message); return null; });
+    }
+
     res.json({
       result,
       prize_name: result === 'win' ? campaign.prize_name : null,
       prize_description: result === 'win' ? campaign.prize_description : null,
-      play_id: play.id
+      play_id: play.id,
+      ...(coinAward && coinAward.coins_awarded ? { coins_awarded: coinAward.coins_awarded, coin_balance: coinAward.new_balance } : {})
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -128,17 +160,23 @@ router.get('/play/:serial_number/info', async (req, res) => {
     const playCount = await countPlaysForUser(activeCampaign.id, serial_number);
     const canPlay = !activeCampaign.max_plays_per_user || playCount < activeCampaign.max_plays_per_user;
 
-    // Check if this serial already has player data from a previous play
+    // HR: giocatore = dipendente del pass, il form di registrazione non esiste.
     let registeredPlayer = null;
-    const { pool } = require('../db');
-    const prevPlay = await pool.query(
-      `SELECT player_first_name, player_last_name, player_email, player_phone
-       FROM instant_win_plays WHERE serial_number = $1 AND player_email IS NOT NULL
-       ORDER BY played_at DESC LIMIT 1`,
-      [serial_number]
-    );
-    if (prevPlay.rows.length > 0) {
-      registeredPlayer = prevPlay.rows[0];
+    if (isHrBrand(brand)) {
+      const hrPlayer = await resolveHrGamePlayer(serialPassForInfo(pass));
+      if (hrPlayer) registeredPlayer = hrPlayer;
+    }
+    if (!registeredPlayer) {
+      const { pool } = require('../db');
+      const prevPlay = await pool.query(
+        `SELECT player_first_name, player_last_name, player_email, player_phone
+         FROM instant_win_plays WHERE serial_number = $1 AND player_email IS NOT NULL
+         ORDER BY played_at DESC LIMIT 1`,
+        [serial_number]
+      );
+      if (prevPlay.rows.length > 0) {
+        registeredPlayer = prevPlay.rows[0];
+      }
     }
 
     res.json({
@@ -172,9 +210,13 @@ router.get('/game/:serial_number/info', async (req, res) => {
     const allCampaigns = await listGamificationCampaigns(pass.brand_id);
     const activeCampaign = allCampaigns.find(c => c.status === 'active');
 
-    // Check if player already registered (from gamification or instant win plays)
+    // HR: giocatore = dipendente del pass (niente form).
     let registeredPlayer = null;
-    const prevPlay = await pool.query(
+    if (isHrBrand(brand)) {
+      const hrPlayer = await resolveHrGamePlayer(pass);
+      if (hrPlayer) registeredPlayer = hrPlayer;
+    }
+    const prevPlay = registeredPlayer ? { rows: [] } : await pool.query(
       `SELECT player_first_name, player_last_name, player_email, player_phone
        FROM gamification_plays WHERE serial_number = $1 AND player_email IS NOT NULL
        ORDER BY played_at DESC LIMIT 1`,
@@ -182,7 +224,7 @@ router.get('/game/:serial_number/info', async (req, res) => {
     );
     if (prevPlay.rows.length > 0) {
       registeredPlayer = prevPlay.rows[0];
-    } else {
+    } else if (!registeredPlayer) {
       // Fallback: check instant_win_plays too
       const iwPlay = await pool.query(
         `SELECT player_first_name, player_last_name, player_email, player_phone
@@ -207,11 +249,24 @@ router.get('/game/:serial_number/info', async (req, res) => {
 router.post('/game/:serial_number', async (req, res) => {
   try {
     const { serial_number } = req.params;
-    const { campaign_id, completion_time_secs, score,
+    let { campaign_id, completion_time_secs, score,
       player_email, player_phone, player_first_name, player_last_name, privacy_accepted } = req.body;
 
     const pass = await getPassBySerial(serial_number);
     if (!pass) return res.status(404).json({ error: 'Pass non trovato' });
+
+    const gameBrand = await getBrand(pass.brand_id);
+    const hrDeploy = isHrBrand(gameBrand);
+    if (hrDeploy) {
+      const hrPlayer = await resolveHrGamePlayer(pass);
+      if (hrPlayer) {
+        player_first_name = hrPlayer.player_first_name || player_first_name;
+        player_last_name = hrPlayer.player_last_name || player_last_name;
+        player_email = hrPlayer.player_email || player_email;
+        player_phone = hrPlayer.player_phone || player_phone;
+        privacy_accepted = true;
+      }
+    }
 
     const campaign = await getGamificationCampaign(campaign_id);
     if (!campaign) return res.status(404).json({ error: 'Campagna non trovata' });
@@ -283,12 +338,25 @@ router.post('/game/:serial_number', async (req, res) => {
       metadata: { campaign_id, game_type: campaign.game_type, completion_time_secs: timeSecs, tier, prize_name: prizeName }
     });
 
+    let coinAward = null;
+    if (hrDeploy && tier !== 'none') {
+      coinAward = await creditHrGameWin({
+        brand: gameBrand,
+        pass,
+        campaign,
+        prizeName,
+        playId: play.id,
+        source: 'gamification',
+      }).catch((e) => { console.warn('[game] accredito coin fallito:', e.message); return null; });
+    }
+
     res.json({
       result: tier !== 'none' ? 'win' : 'lose',
       tier,
       prize_name: prizeName,
       completion_time_secs: timeSecs,
-      play_id: play.id
+      play_id: play.id,
+      ...(coinAward && coinAward.coins_awarded ? { coins_awarded: coinAward.coins_awarded, coin_balance: coinAward.new_balance } : {})
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

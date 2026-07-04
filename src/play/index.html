@@ -553,7 +553,9 @@ function showResult(data) {
     icon.textContent = '🎉';
     title.textContent = 'HAI VINTO!';
     title.style.color = 'var(--gold)';
-    desc.textContent = data.prize_description || 'Complimenti!';
+    desc.textContent = data.coins_awarded
+      ? `${data.coins_awarded} coin accreditati sul tuo pass!` + (data.coin_balance != null ? ` Nuovo saldo: ${data.coin_balance} coin.` : '')
+      : (data.prize_description || 'Complimenti!');
     prize.textContent = data.prize_name;
     prize.style.display = 'block';
     launchConfetti();
