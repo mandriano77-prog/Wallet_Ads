@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FiloDiretto">
-  <rect width="512" height="512" rx="115" fill="#7c3aed"/>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny-ps" viewBox="0 0 512 512">
+  <title>FiloDiretto</title>
+  <rect width="512" height="512" fill="#7c3aed"/>
   <path d="M150 368 C 230 368, 200 144, 362 144" fill="none" stroke="#ffffff" stroke-width="36" stroke-linecap="round"/>
   <circle cx="150" cy="368" r="34" fill="#ffffff"/>
   <circle cx="362" cy="144" r="34" fill="#ffffff"/>
