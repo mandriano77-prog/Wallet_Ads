@@ -554,7 +554,7 @@
     if (!host) return;
     if (!groups.length) {
       host.innerHTML = '<div class="card" style="padding:var(--space-5)"><p style="margin:0;color:var(--text-muted)">'
-        + 'Nessun servizio EXTRA attivo per la tua azienda al momento.</p></div>';
+        + 'Nessun servizio extra attivo per la tua azienda al momento.</p></div>';
       return;
     }
     host.innerHTML = groups.map(function (g) {
