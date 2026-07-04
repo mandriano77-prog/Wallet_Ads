@@ -747,6 +747,68 @@ async function sendScratchEmail({ to, name, brandName, brandColor, scratchUrl, c
 /**
  * Password reset link for dashboard users
  */
+async function sendPushReportEmail({ to, brandName, title, screenAlert, origin, outcome, productTitle }) {
+  const product = dashboardEmailProductTitle(productTitle);
+  const o = outcome || {};
+  const statusEmoji = o.hasErrors ? '⚠️' : '✅';
+  const statusLabel = o.hasErrors ? 'con errori' : 'consegnata';
+
+  const row = (label, value) => `
+      <tr>
+        <td style="padding:8px 0;color:${FD_DASHBOARD_EMAIL.textMuted};font-size:14px;border-bottom:1px solid ${FD_DASHBOARD_EMAIL.border};">${label}</td>
+        <td style="padding:8px 0;color:${FD_DASHBOARD_EMAIL.textPrimary};font-size:14px;font-weight:600;text-align:right;border-bottom:1px solid ${FD_DASHBOARD_EMAIL.border};">${value}</td>
+      </tr>`;
+
+  let rows = row('iPhone (Apple Wallet)', `${o.apnsSent || 0}/${o.apnsTotal || 0} consegnate`);
+  rows += o.gw?.skipped
+    ? row('Google Wallet', 'non configurato')
+    : row('Google Wallet', `${o.gw?.updated || 0} pass aggiornati${(o.gw?.errors || 0) > 0 ? ` — ${o.gw.errors} errori` : ''}`);
+  if (o.sam && !o.sam.skipped) {
+    rows += row('Samsung Wallet', `${o.sam.notified || 0}/${o.sam.attempted || 0} notificati`);
+  }
+
+  let errorsHtml = '';
+  if ((o.failures || []).length) {
+    const items = o.failures.slice(0, 10)
+      .map((f) => `${String(f.token || '').slice(0, 16)}…: ${f.reason || f.error || 'unknown'}`)
+      .join('<br>');
+    errorsHtml = `
+      <div style="margin:16px 0 0;padding:12px 14px;border-radius:10px;background:#fef2f2;color:#dc2626;font-size:13px;line-height:1.6;">
+        <strong>Errori APNs (${o.failures.length})</strong><br>${items}
+      </div>`;
+  } else if (o.hasErrors) {
+    errorsHtml = `
+      <div style="margin:16px 0 0;padding:12px 14px;border-radius:10px;background:#fffbeb;color:#a16207;font-size:13px;line-height:1.6;">
+        Invio partito ma senza consegne Apple: controlla certificati APNs e device registrati.
+      </div>`;
+  }
+
+  const bodyHtml = `
+      <p style="color:${FD_DASHBOARD_EMAIL.textBody};font-size:15px;line-height:1.6;margin:0 0 6px;">
+        <strong style="color:${FD_DASHBOARD_EMAIL.textPrimary};">${brandName}</strong> — push ${origin === 'programmata' ? 'programmata' : 'manuale'}
+      </p>
+      <p style="color:${FD_DASHBOARD_EMAIL.textMuted};font-size:13px;line-height:1.6;margin:0 0 16px;">
+        «${String(screenAlert || title || '').slice(0, 140)}»
+      </p>
+      <table style="width:100%;border-collapse:collapse;">${rows}</table>
+      ${errorsHtml}`;
+
+  const html = filoDashboardEmailLayout({
+    productTitle: product,
+    headline: `${statusEmoji} Push ${statusLabel} — ${o.delivered || 0} consegne`,
+    subtitle: 'Report automatico di consegna.',
+    bodyHtml,
+    footnote: 'Ricevi questo report dopo ogni invio push. Per cambiarne il destinatario: brand.config.push_report_email.'
+  });
+
+  return sendViaResend({
+    from: `${getFromName()} <${getFromEmail()}>`,
+    to: [to],
+    subject: `${statusEmoji} Push ${statusLabel} — ${brandName}: ${o.delivered || 0} consegne${o.hasErrors ? ' (VERIFICA ERRORI)' : ''}`,
+    html
+  }, { logLabel: 'push report' });
+}
+
 async function sendLoginOtpEmail({ to, name, code, productTitle }) {
   const resend = getResend();
   if (!resend) {
@@ -1039,6 +1101,7 @@ module.exports = {
   sendScratchEmail,
   sendPasswordResetEmail,
   sendLoginOtpEmail,
+  sendPushReportEmail,
   sendActivationEmail,
   sendActivationReminderEmail,
   sendPassAccessEmail,

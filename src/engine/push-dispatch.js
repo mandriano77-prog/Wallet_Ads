@@ -400,7 +400,7 @@ async function executeWalletPush(body, ctx = {}) {
   const sentCombined = sentAppleCount + (googleSync.updated || 0) + (samsungSync.notified || 0);
   await logPush({ brand_id, title, message, campaign_id, sent_count: sentCombined, channel, strip_base64: overlayStrip || null, screen_alert: screenTextInput || null });
 
-  return {
+  const dispatchResult = {
     sent_apns: sentAppleCount,
     total_apns: sendApple ? devices.length : 0,
     google: googleSync,
@@ -408,6 +408,28 @@ async function executeWalletPush(body, ctx = {}) {
     sent: sentCombined,
     apns_results: pushResults,
   };
+
+  // Report email post-invio (solo invii reali, non prove): fire-and-forget,
+  // così gli errori delle push programmate non restano invisibili.
+  if (!test_pass_id) {
+    (async () => {
+      try {
+        const reportBrand = await getBrand(brand_id);
+        const { sendPushReportSafe } = require('./push-report');
+        await sendPushReportSafe({
+          brand: reportBrand,
+          title: effectiveTitle,
+          screenAlert: screenTextInput,
+          result: dispatchResult,
+          origin: ctx.origin || 'manuale',
+        });
+      } catch (err) {
+        console.warn('[PUSH] report email skipped:', err.message);
+      }
+    })();
+  }
+
+  return dispatchResult;
 }
 
 function enqueuePushJob(jobId, ctx = {}) {

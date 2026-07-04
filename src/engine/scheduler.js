@@ -119,6 +119,7 @@ async function executeScheduledPush(schedule, baseUrl) {
   const result = await executeWalletPush({ ...normalized, screen_alert }, {
     hrDeploy: true,
     resolvedStripBase64: schedule.strip_base64 || null,
+    origin: 'programmata',
   });
   closeApnsSession();
 

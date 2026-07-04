@@ -4684,6 +4684,7 @@ module.exports = {
   getPasswordResetUserByToken,
   markPasswordResetTokenUsed,
   seedAdminUser,
+  deployLoginAllowlistEmails,
   // Media Hub
   createMedia,
   listMedia,
