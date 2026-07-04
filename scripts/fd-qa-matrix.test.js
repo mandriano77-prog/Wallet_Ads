@@ -157,8 +157,8 @@ test('fd.bundle.css preserves calc() operator spacing (W.AI inset)', () => {
 
 test('index.html bundle cache references wide-layout tag', () => {
   const html = read('src/dashboard/index.html');
-  assert.match(html, /fd\.bundle\.css\?v=20260704-pushresult/);
-  assert.match(html, /fd\.bundle\.js\?v=20260704-pushresult/);
+  assert.match(html, /fd\.bundle\.css\?v=20260704-linkedcontent/);
+  assert.match(html, /fd\.bundle\.js\?v=20260704-linkedcontent/);
   assert.match(html, /\/dashboard\/lib\/public-url\.js/);
   assert.match(html, /function a2wPublicUrlBase/);
   assert.match(html, /#a2wMediaTabs\{display:none!important\}/);
@@ -727,7 +727,7 @@ test('Push pass link fields stay visible without an include checkbox', () => {
   assert.doesNotMatch(dashboard, /id="pushIncludePassLink"/);
   assert.doesNotMatch(fdPush, /pushIncludePassLink/);
   assert.match(dashboard, /id="pushPassLinkFields" style="display:block/);
-  assert.match(fdPush, /var passLinkUrl = \(document\.getElementById\('pushPassLinkUrl'\)\?\.value \|\| ''\)\.trim\(\);[\s\S]*body\.include_pass_link = true/);
+  assert.match(fdPush, /var passLinkUrl = linkedValue \? '' : \(document\.getElementById\('pushPassLinkUrl'\)\?\.value \|\| ''\)\.trim\(\);[\s\S]*body\.include_pass_link = true/);
   assert.match(wai, /extractFirstUrlFromText/);
 });
 

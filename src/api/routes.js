@@ -2634,7 +2634,13 @@ router.post('/push/scheduled', async (req, res) => {
       });
     }
     const body = normalizeHrPushPayload(req.body);
-    if (body.pass_link_url) {
+    // Contenuto collegato = padrone del Link 1: scarta ogni link manuale.
+    if (body.instant_win_id || body.gamification_id) {
+      body.include_pass_link = false;
+      body.pass_link_url = null;
+      body.pass_link_label = null;
+      body.pass_link_expires_at = null;
+    } else if (body.pass_link_url) {
       parsePassLinkFromPushBody(body, body.title);
       body.include_pass_link = true;
     }

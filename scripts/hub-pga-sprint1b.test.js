@@ -377,7 +377,7 @@ test('scheduled push: screen_alert stored, validated, and derived on execute', (
   const db = read('src/db/index.js');
   assert.match(db, /scheduled_push ADD COLUMN IF NOT EXISTS screen_alert/);
   assert.match(db, /screen_alert(?:.|\n){0,600}INSERT INTO scheduled_push/);
-  assert.match(db, /'screen_alert'\]/);
+  assert.match(db, /updateScheduledPush[\s\S]{0,600}'screen_alert'/);
   const scheduler = read('src/engine/scheduler.js');
   assert.match(scheduler, /normalizeHrPushPayload\(schedule\)/);
   assert.match(scheduler, /resolvePushScreenAlert\(normalized\)/);

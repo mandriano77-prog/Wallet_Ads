@@ -198,7 +198,9 @@ test('LOCK: scheduled_push persiste screen_alert e lo scheduler normalizza come 
   const db = read('src/db/index.js');
   assert.match(db, /scheduled_push ADD COLUMN IF NOT EXISTS screen_alert/);
   assert.match(db, /INSERT INTO scheduled_push[\s\S]{0,400}screen_alert/);
-  assert.match(db, /'screen_alert'\]/);
+  // screen_alert nella whitelist di updateScheduledPush (posizione libera:
+  // altri campi possono seguire, l'invariante e' la presenza).
+  assert.match(db, /updateScheduledPush[\s\S]{0,600}'screen_alert'/);
   const scheduler = read('src/engine/scheduler.js');
   assert.match(scheduler, /normalizeHrPushPayload\(schedule\)/);
   assert.match(scheduler, /resolvePushScreenAlert\(normalized\)/);

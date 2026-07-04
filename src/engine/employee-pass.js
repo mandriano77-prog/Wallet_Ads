@@ -71,7 +71,28 @@ function resolveMemberProfile(memberRow, instance) {
   };
 }
 
-function resolveVariableLink(instance, template, brandConfig = {}) {
+function resolveVariableLink(instance, template, brandConfig = {}, opts = {}) {
+  // Contenuto collegato alla push (gioco instant win / challenge): quando
+  // attivo occupa il Link 1 e SOSTITUISCE ogni link manuale (regola "o uno
+  // o l'altro" — vedi «Collega contenuto» nel pannello push).
+  const serial = String(opts.serialNumber || instance?.serial_number || '').trim();
+  const publicBase = String(opts.publicBaseUrl || '').replace(/\/+$/, '');
+  if (publicBase && serial) {
+    if (brandConfig.instantWinActive) {
+      return {
+        label: brandConfig.instantWinActive.label || 'Gioca e Vinci!',
+        url: `${publicBase}/play/${serial}`
+      };
+    }
+    if (brandConfig.gamificationActive) {
+      const gameTypeRoutes = { quiz: 'quiz', memory: 'memory', puzzle: 'puzzle' };
+      const gameRoute = gameTypeRoutes[brandConfig.gamificationActive.game_type] || 'quiz';
+      return {
+        label: brandConfig.gamificationActive.label || 'Gioca ora!',
+        url: `${publicBase}/game/${gameRoute}/${serial}`
+      };
+    }
+  }
   const now = new Date();
   if (instance?.dynamic_link_url) {
     const exp = instance.dynamic_link_expires_at ? new Date(instance.dynamic_link_expires_at) : null;
@@ -414,10 +435,12 @@ function backTextDuplicatesPushCopy(text, pushAnn, dynamicLink) {
   return false;
 }
 
-function buildBackSections({ brand, template, instance, member, brandConfig = {}, portalUrl = null, hubUrl = null }) {
+function buildBackSections({ brand, template, instance, member, brandConfig = {}, portalUrl = null, hubUrl = null, apiBase = null }) {
   const sections = [];
   const hrBack = resolveHrBackSource(template, brand);
   const pushAnn = resolvePushAnnouncement(brandConfig, instance);
+  // Base pubblica per i link dei giochi (/play, /game): derivata dall'apiBase.
+  const publicBaseUrl = apiBase ? String(apiBase).replace(/\/api\/v1\/?$/, '') : null;
 
   // Messaggio geofencing: PRIMA cosa visibile girando il pass (prima dei link
   // HUB/Supporto/Area privata). Testo fisso, senza changeMessage → aggiornamento
@@ -434,7 +457,7 @@ function buildBackSections({ brand, template, instance, member, brandConfig = {}
 
   // Link CTA first. Notification copy is handled by the front technical field,
   // not mirrored on the back.
-  const dynamicLink = resolveVariableLink(instance, template, brandConfig);
+  const dynamicLink = resolveVariableLink(instance, template, brandConfig, { publicBaseUrl });
   if (dynamicLink?.url) {
     sections.push({
       kind: 'link',
@@ -620,7 +643,8 @@ function buildEmployeePass({ brand, template, instance, member, brandConfig, api
     member,
     brandConfig: cfg,
     portalUrl,
-    hubUrl
+    hubUrl,
+    apiBase
   });
 
   const primary = [];

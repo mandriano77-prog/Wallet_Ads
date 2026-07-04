@@ -265,11 +265,15 @@ async function executeWalletPush(body, ctx = {}) {
     delete config.pushAnnouncement;
     delete config.stripOverride;
 
-    passLink = parsePassLinkFromPushBody(
+    // Contenuto collegato (gioco) = padrone del Link 1: sostituisce qualsiasi
+    // link manuale ("o uno o l'altro"). Il link per-serial lo costruisce
+    // employee-pass (resolveVariableLink) dal config instantWin/gamification.
+    const linkedGameContent = Boolean(instant_win_id || gamification_id);
+    passLink = linkedGameContent ? null : parsePassLinkFromPushBody(
       { include_pass_link, pass_link_url, pass_link_label, pass_link_expires_at, back_link_url, back_link_label },
       effectiveTitle
     );
-    if (!passLink && include_pass_link !== false) {
+    if (!linkedGameContent && !passLink && include_pass_link !== false) {
       const linkOutUrl = (back_link_url || pass_link_url || '').trim();
       if (linkOutUrl) {
         passLink = parsePassLinkFromPushBody(

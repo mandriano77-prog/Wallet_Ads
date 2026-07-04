@@ -663,7 +663,8 @@
     if (audienceId) body.audience_id = audienceId;
     else if (campaignId) body.campaign_id = campaignId;
 
-    var passLinkUrl = (document.getElementById('pushPassLinkUrl')?.value || '').trim();
+    var linkedValue = document.getElementById('pushLinkedContent')?.value || '';
+    var passLinkUrl = linkedValue ? '' : (document.getElementById('pushPassLinkUrl')?.value || '').trim();
     if (passLinkUrl) {
       body.include_pass_link = true;
       body.pass_link_url = passLinkUrl;
