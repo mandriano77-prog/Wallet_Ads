@@ -4,7 +4,7 @@
 const assert = require('node:assert');
 const test = require('node:test');
 
-const { summarizeOutcome, resolveReportRecipient } = require('../src/engine/push-report');
+const { summarizeOutcome, resolveReportRecipients } = require('../src/engine/push-report');
 
 test('summarizeOutcome: invio pulito', () => {
   const o = summarizeOutcome({
@@ -38,12 +38,10 @@ test('summarizeOutcome: nessun device Apple non è errore (brand solo Google)', 
   assert.equal(o.delivered, 4);
 });
 
-test('resolveReportRecipient: config del brand vince, fallback allowlist', () => {
-  assert.equal(
-    resolveReportRecipient({ config: { push_report_email: 'hr@azienda.it' } }),
-    'hr@azienda.it'
-  );
-  // Senza config: fallback al primo operatore allowlist (default deploy HR).
-  const fallback = resolveReportRecipient({ config: {} });
-  assert.ok(fallback === null || /@/.test(fallback));
+test('resolveReportRecipients: include config brand + allowlist, dedup e solo email valide', async () => {
+  // Senza DB (listUsers fallisce e viene loggata): restano config + allowlist.
+  const list = await resolveReportRecipients({ id: 'b1', config: { push_report_email: 'HR@azienda.it' } });
+  assert.ok(list.includes('hr@azienda.it'), 'config brand presente (lowercased)');
+  assert.ok(list.every((e) => e.includes('@')), 'solo email valide');
+  assert.equal(new Set(list).size, list.length, 'nessun duplicato');
 });

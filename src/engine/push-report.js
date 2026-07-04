@@ -4,21 +4,40 @@
  * Ragione d'essere: le push programmate partono senza nessuno davanti alla
  * dashboard — un errore silenzioso resterebbe invisibile.
  *
- * Destinatario: brand.config.push_report_email se impostata, altrimenti il
- * primo operatore dell'allowlist deploy (l'admin piattaforma).
+ * Destinatari: tutti gli utenti dashboard che vedono il brand (manager del
+ * brand + admin piattaforma, che ricevono i report di tutti i brand), più
+ * l'eventuale brand.config.push_report_email e l'operatore allowlist.
  * Best-effort: mai propagare errori (il report non deve far fallire l'invio).
  */
 'use strict';
 
-function resolveReportRecipient(brand) {
-  const cfgEmail = String(brand?.config?.push_report_email || '').trim();
-  if (cfgEmail) return cfgEmail;
+async function resolveReportRecipients(brand) {
+  const emails = new Set();
+  const add = (e) => {
+    const v = String(e || '').trim().toLowerCase();
+    if (v && v.includes('@')) emails.add(v);
+  };
+
+  // Manager del brand + admin piattaforma (brand_id NULL) — solo account attivi.
+  try {
+    const { listUsers } = require('../db');
+    const users = await listUsers(brand?.id || null);
+    for (const u of users || []) {
+      if (u.active === false) continue;
+      add(u.email);
+    }
+  } catch (err) {
+    console.warn('[push-report] listUsers fallita:', err.message);
+  }
+
+  // Destinatario extra per-brand (config) + operatore allowlist come rete di sicurezza.
+  add(brand?.config?.push_report_email);
   try {
     const { deployLoginAllowlistEmails } = require('../db');
-    const list = deployLoginAllowlistEmails();
-    if (list && list.length) return list[0];
+    for (const e of deployLoginAllowlistEmails() || []) add(e);
   } catch (_) { /* fallthrough */ }
-  return null;
+
+  return [...emails];
 }
 
 function summarizeOutcome(result) {
@@ -36,8 +55,8 @@ function summarizeOutcome(result) {
 
 async function sendPushReportSafe({ brand, title, screenAlert, result, origin }) {
   try {
-    const to = resolveReportRecipient(brand);
-    if (!to) return { skipped: true, reason: 'nessun destinatario' };
+    const to = await resolveReportRecipients(brand);
+    if (!to.length) return { skipped: true, reason: 'nessun destinatario' };
     const { sendPushReportEmail } = require('./mailer');
     const outcome = summarizeOutcome(result);
     await sendPushReportEmail({
@@ -55,4 +74,4 @@ async function sendPushReportSafe({ brand, title, screenAlert, result, origin })
   }
 }
 
-module.exports = { sendPushReportSafe, summarizeOutcome, resolveReportRecipient };
+module.exports = { sendPushReportSafe, summarizeOutcome, resolveReportRecipients };

@@ -803,7 +803,7 @@ async function sendPushReportEmail({ to, brandName, title, screenAlert, origin, 
 
   return sendViaResend({
     from: `${getFromName()} <${getFromEmail()}>`,
-    to: [to],
+    to: Array.isArray(to) ? to : [to],
     subject: `${statusEmoji} Push ${statusLabel} — ${brandName}: ${o.delivered || 0} consegne${o.hasErrors ? ' (VERIFICA ERRORI)' : ''}`,
     html
   }, { logLabel: 'push report' });
