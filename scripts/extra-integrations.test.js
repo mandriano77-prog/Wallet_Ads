@@ -113,3 +113,17 @@ test('Ferie: voce nativa con categoria e flag native', () => {
   assert.equal(en[0].category_label, 'Ferie e permessi');
   assert.equal(en[0].native, true);
 });
+
+test('provider multi-categoria + dominio per logo', () => {
+  const provs = availableProviders();
+  const byType = Object.fromEntries(provs.map((p) => [p.type, p]));
+  // Pluxee, Day, Coverflex, Edenred, Satispay fanno sia buoni pasto sia fringe.
+  ['edenred', 'satispay', 'pluxee', 'day', 'coverflex'].forEach((t) => {
+    assert.ok(byType[t].categories.includes('buoni_pasto'), t + ' deve stare in buoni_pasto');
+    assert.ok(byType[t].categories.includes('fringe'), t + ' deve stare in fringe');
+  });
+  // Dominio presente per il logo automatico.
+  assert.equal(byType.edenred.domain, 'edenred.it');
+  assert.equal(byType.satispay.domain, 'satispay.com');
+  assert.ok(byType.coverflex.domain);
+});

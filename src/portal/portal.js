@@ -697,8 +697,10 @@
         } else if (it.status !== 'connected') {
           action = '<button type="button" class="btn btn-sm" disabled title="Presto disponibile">Collega</button>';
         }
-        const logo = it.logo_url
-          ? '<img class="extra-logo" src="' + esc(it.logo_url) + '" alt="" />'
+        var logoSrc = it.logo_url || (it.domain ? 'https://logo.clearbit.com/' + it.domain : null);
+        const logo = logoSrc
+          ? '<div class="extra-logo extra-logo--ph">' + esc((it.label || '?').charAt(0).toUpperCase())
+              + '<img src="' + esc(logoSrc) + '" alt="" onerror="this.remove()"></div>'
           : '<div class="extra-logo extra-logo--ph">' + esc((it.label || '?').charAt(0).toUpperCase()) + '</div>';
         return '<div class="extra-card">'
           + logo

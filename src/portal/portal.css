@@ -873,3 +873,6 @@
 .extra-leave__item { display: flex; flex-direction: column; }
 .extra-leave__item strong { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
 .extra-leave__item span { font-size: 11px; color: var(--text-muted); }
+
+.extra-logo--ph { position: relative; overflow: hidden; }
+.extra-logo--ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; }

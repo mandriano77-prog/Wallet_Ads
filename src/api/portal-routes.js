@@ -200,6 +200,7 @@ router.get('/me/integrations', async (req, res) => {
         category: it.category,
         category_label: it.category_label,
         logo_url: it.logo_url,
+        domain: it.domain || null,
         mode: it.mode,
         native: it.native,
         deeplink_url: it.deeplink_url,

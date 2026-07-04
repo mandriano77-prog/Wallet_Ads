@@ -14,22 +14,24 @@ const SPECIFIC = {
   pellegrini: require('./pellegrini'),
   satispay: require('./satispay'),
 };
+const SPECIFIC_DOMAINS = { edenred: 'edenred.it', pellegrini: 'pellegrinigroup.it', satispay: 'satispay.com' };
+for (const [t, d] of Object.entries(SPECIFIC_DOMAINS)) { if (SPECIFIC[t]) SPECIFIC[t].domain = d; }
 
 // Catalogo placeholder: i big del mercato IT (buoni pasto + welfare).
 // Aggiungere un provider = una riga qui. Modalità manuale/import finché non
 // esiste una API reale, poi si promuove a adapter dedicato.
 const PLACEHOLDERS = [
-  { type: 'coverflex', label: 'Coverflex', category: 'fringe' },
-  { type: 'pluxee', label: 'Pluxee', category: 'buoni_pasto' },
-  { type: 'day', label: 'Day', category: 'buoni_pasto' },
-  { type: 'repas', label: 'Repas', category: 'buoni_pasto' },
-  { type: 'jointly', label: 'Jointly', category: 'fringe' },
-  { type: 'doubleyou', label: 'Double You', category: 'fringe' },
+  { type: 'coverflex', label: 'Coverflex', categories: ['fringe', 'buoni_pasto'], domain: 'coverflex.com' },
+  { type: 'pluxee', label: 'Pluxee', categories: ['buoni_pasto', 'fringe'], domain: 'pluxee.it' },
+  { type: 'day', label: 'Day', categories: ['buoni_pasto', 'fringe'], domain: 'day.it' },
+  { type: 'repas', label: 'Repas', categories: ['buoni_pasto'], domain: 'repas.it' },
+  { type: 'jointly', label: 'Jointly', categories: ['fringe'], domain: 'jointly.pro' },
+  { type: 'doubleyou', label: 'Double You', categories: ['fringe'], domain: 'doubleyou.com' },
 ];
 
 const ADAPTERS = { ...SPECIFIC };
 for (const pl of PLACEHOLDERS) {
-  if (!ADAPTERS[pl.type]) ADAPTERS[pl.type] = makePlaceholderAdapter(pl);
+  if (!ADAPTERS[pl.type]) { ADAPTERS[pl.type] = makePlaceholderAdapter(pl); ADAPTERS[pl.type].domain = pl.domain || null; }
 }
 
 // Voci NATIVE: non provider terzi, ma dati aziendali (ferie, ecc.) sullo stesso
@@ -64,6 +66,7 @@ function enabledIntegrations(brandConfig = {}) {
         categories,
         category_label: CATEGORIES[category],
         logo_url: it.logo_url || null,
+        domain: adapter.domain || null,
         mode: ['manual', 'deeplink', 'api'].includes(it.mode) ? it.mode : 'api',
         deeplink_url: it.deeplink_url || null,
         native: !!adapter.native,
@@ -78,6 +81,7 @@ function availableProviders() {
     label: a.defaultLabel,
     category: a.defaultCategory,
     categories: a.defaultCategories || [a.defaultCategory],
+    domain: a.domain || null,
     native: !!a.native,
   }));
 }

@@ -3240,8 +3240,8 @@
 .extra-tile { position:relative; display:flex; flex-direction:column; align-items:center; gap:10px; padding:18px 12px; border:1px solid var(--border-default); border-radius:14px; background:var(--surface,#fff); cursor:pointer; transition:border-color .15s, box-shadow .15s; }
 .extra-tile:hover { border-color:var(--accent,#8B5CF6); box-shadow:0 4px 14px rgba(15,23,42,.08); }
 .extra-tile.is-active { border-color:var(--accent,#8B5CF6); }
-.extra-tile__logo { width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:18px; overflow:hidden; background:#94a3b8; }
-.extra-tile__logo img { width:100%; height:100%; object-fit:cover; }
+.extra-tile__logo { position:relative; width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:18px; overflow:hidden; background:#94a3b8; }
+.extra-tile__logo img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#fff; }
 .extra-tile__name { font-size:13px; font-weight:600; color:var(--text1,#0f172a); text-align:center; }
 .extra-tile__badge { position:absolute; top:8px; right:8px; font-size:10px; font-weight:700; color:#047857; background:#ecfdf5; padding:2px 7px; border-radius:999px; }
 .extra-tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
@@ -9022,10 +9022,19 @@ function extraColor(type) {
     return `hsl(${h} 55% 45%)`;
 }
 
+function extraLogoSrc(pr, cur) {
+    if (cur && cur.logo_url) return cur.logo_url;           // logo custom incollato dall'admin
+    if (pr && pr.domain) return 'https://logo.clearbit.com/' + pr.domain; // logo ufficiale per dominio
+    return null;
+}
+function extraLogoInner(pr, cur) {
+    const mono = esc(extraMonogram((cur && cur.label) || pr.label));
+    const src = extraLogoSrc(pr, cur);
+    // Il monogramma è sotto; il logo lo copre. Se il logo non carica → onerror lo rimuove → resta il monogramma.
+    return mono + (src ? `<img src="${esc(src)}" alt="" onerror="this.remove()">` : '');
+}
 function extraTileLogo(pr, cur) {
-    const logo = (cur && cur.logo_url) || null;
-    if (logo) return `<div class="extra-tile__logo"><img src="${esc(logo)}" alt=""></div>`;
-    return `<div class="extra-tile__logo" style="background:${extraColor(pr.type)}">${esc(extraMonogram(cur && cur.label || pr.label))}</div>`;
+    return `<div class="extra-tile__logo" style="background:${extraColor(pr.type)}">${extraLogoInner(pr, cur)}</div>`;
 }
 
 function renderExtraGrid() {
@@ -9053,9 +9062,8 @@ function openExtraDrawer(type) {
     const on = !!cur;
     document.getElementById('extraDrawerTitle').textContent = (cur && cur.label) || pr.label;
     const logoBox = document.getElementById('extraDrawerLogo');
-    const logo = cur && cur.logo_url;
-    logoBox.innerHTML = logo ? `<img src="${esc(logo)}" alt="">` : esc(extraMonogram((cur && cur.label) || pr.label));
-    logoBox.style.background = logo ? 'transparent' : extraColor(type);
+    logoBox.style.background = extraColor(type);
+    logoBox.innerHTML = extraLogoInner(pr, cur);
     document.getElementById('extraDrawerTags').innerHTML = extraProviderCategories(pr)
         .map(c => `<span class="extra-tag">${esc(EXTRA_CATEGORIES[c] || c)}</span>`).join('');
     document.getElementById('extraDrawerEnabled').checked = on;
