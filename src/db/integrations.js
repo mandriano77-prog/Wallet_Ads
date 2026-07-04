@@ -108,6 +108,16 @@ async function bulkUpsertByEmployeeId(brandId, type, rows) {
     const existing = await getMemberIntegration(member.id, type);
     const data = (existing && existing.data && typeof existing.data === 'object') ? { ...existing.data } : {};
 
+    // Voci native "credito residuo €" (welfare / fringe benefit): un importo residuo.
+    if (type === 'welfare_credit' || type === 'fringe_benefit') {
+      if (row.amount != null && row.amount !== '') data.residuo = Number(String(row.amount).replace(',', '.'));
+      data.currency = row.currency || data.currency || 'EUR';
+      data.updated_label = row.period ? String(row.period) : new Date().toLocaleDateString('it-IT');
+      await upsertMemberIntegration({ member_id: member.id, brand_id: brandId, type, status: 'connected', data });
+      updated += 1;
+      continue;
+    }
+
     // Voce nativa ferie: mappa ferie/permessi residui (giorni), non importi.
     if (type === 'ferie') {
       if (row.ferie != null && row.ferie !== '') data.ferie_residue = Number(String(row.ferie).replace(',', '.'));

@@ -37,6 +37,8 @@ for (const pl of PLACEHOLDERS) {
 // Voci NATIVE: non provider terzi, ma dati aziendali (ferie, ecc.) sullo stesso
 // rail. native:true → il portale le rende come widget-dato, non come brand.
 ADAPTERS.ferie = makePlaceholderAdapter({ type: 'ferie', label: 'Ferie e permessi', categories: ['ferie'], native: true });
+ADAPTERS.welfare_credit = makePlaceholderAdapter({ type: 'welfare_credit', label: 'Credito welfare', categories: ['fringe'], native: true });
+ADAPTERS.fringe_benefit = makePlaceholderAdapter({ type: 'fringe_benefit', label: 'Fringe benefit', categories: ['fringe'], native: true });
 
 /** Categorie note per raggruppare le card nel portale. */
 const CATEGORIES = Object.freeze({

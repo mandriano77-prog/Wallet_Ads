@@ -127,3 +127,14 @@ test('provider multi-categoria + dominio per logo', () => {
   assert.equal(byType.satispay.domain, 'satispay.com');
   assert.ok(byType.coverflex.domain);
 });
+
+test('Credito welfare + Fringe benefit: voci native amount sotto fringe', () => {
+  ['welfare_credit', 'fringe_benefit'].forEach((t) => {
+    const a = getAdapter(t);
+    assert.ok(a, 'adapter ' + t + ' presente');
+    assert.equal(a.native, true);
+    const en = enabledIntegrations({ integrations: [{ type: t, enabled: true }] });
+    assert.equal(en[0].category, 'fringe');
+    assert.equal(en[0].native, true);
+  });
+});

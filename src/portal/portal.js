@@ -659,6 +659,18 @@
     host.innerHTML = groups.map(function (g) {
       const cards = g.items.map(function (it) {
         const st = extraStatusLabel(it.status);
+        // Voci native "credito residuo €" (welfare / fringe benefit).
+        if (it.native && (it.type === 'welfare_credit' || it.type === 'fringe_benefit')) {
+          const r = it.data && it.data.residuo;
+          const cur2 = (it.data && it.data.currency) || 'EUR';
+          const upd = it.data && it.data.updated_label ? '<span class="extra-period">Aggiornato al ' + esc(it.data.updated_label) + '</span>' : '';
+          const body = (r != null)
+            ? '<div class="extra-balance">' + esc(formatMoney(r)) + ' ' + esc(cur2) + ' residui</div>' + upd
+            : '<span class="extra-status extra-status--muted">In attesa di aggiornamento</span>';
+          const logoN = '<div class="extra-logo extra-logo--ph">' + (it.type === 'welfare_credit' ? '\ud83d\udc9a' : '\ud83c\udf81') + '</div>';
+          return '<div class="extra-card">' + logoN
+            + '<div class="extra-card__body"><div class="extra-card__label">' + esc(it.label) + '</div>' + body + '</div></div>';
+        }
         // Voce nativa ferie: due numeri (giorni ferie + permessi), niente importi.
         if (it.native && it.type === 'ferie') {
           const fr = it.data && it.data.ferie_residue;
