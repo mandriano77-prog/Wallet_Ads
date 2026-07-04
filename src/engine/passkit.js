@@ -639,12 +639,19 @@ function generatePassJson(template, instance, brand, options = {}) {
     labelColor: passLabelColor,
     authenticationToken: instance.auth_token,
     webServiceURL: `${baseUrl}/api`,
+    // Badge personale: niente bottone Condividi/AirDrop di iOS.
+    sharingProhibited: true,
     [structureKey]: passStructure,
     barcodes: [barcodePayload],
     barcode: barcodePayload
   };
   if (!omitLogoText && passLogoText) {
     passJson.logoText = passLogoText;
+  }
+
+  // Offboarding: il pass revocato resta nel Wallet ma iOS lo mostra barrato.
+  if (String(instance.status || '').toLowerCase() === 'revoked') {
+    passJson.voided = true;
   }
 
   // Geofencing — iOS shows the pass on lock screen when inside maxDistance (m) of any location.

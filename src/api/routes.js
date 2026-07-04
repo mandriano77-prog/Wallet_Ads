@@ -4322,6 +4322,14 @@ router.delete('/brands/:brand_id/members/:member_id', async (req, res) => {
     }
     const result = await deleteMemberRecord(brand_id, member_id);
     if (!result) return res.status(404).json({ error: 'Dipendente non trovato' });
+    if (result.revoked_pass) {
+      // Best-effort: barra il pass nei wallet (Apple voided / Google EXPIRED).
+      const { notifyPassRevoked } = require('../engine/pass-revoke');
+      notifyPassRevoked(result.revoked_pass).catch((err) =>
+        console.warn('[members] notifica revoca pass fallita:', err.message)
+      );
+      delete result.revoked_pass;
+    }
     res.json({ success: true, ...result });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

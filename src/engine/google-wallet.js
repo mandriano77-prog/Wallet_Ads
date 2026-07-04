@@ -310,6 +310,11 @@ function normalizeMerchantLocations(brandConfig) {
  * KEY CHANGE: This no longer calls the Google API.
  * It just returns the class object to be embedded in the JWT.
  */
+/** Stato oggetto Google Wallet: EXPIRED per pass revocati (offboarding), altrimenti ACTIVE. */
+function passObjectState(instance) {
+  return String(instance?.status || '').toLowerCase() === 'revoked' ? 'EXPIRED' : 'ACTIVE';
+}
+
 function buildPassClass(brand, template) {
   const passKind = resolvePassKind(brand);
   const classId = buildClassId(brand, template);
@@ -320,7 +325,9 @@ function buildPassClass(brand, template) {
       id: classId,
       reviewStatus: getReviewStatus(),
       issuerName: brand.name,
-      programName: (template.name || brand.name || 'Loyalty Program').slice(0, 64)
+      programName: (template.name || brand.name || 'Loyalty Program').slice(0, 64),
+      // Badge personale: un solo account Google (equivalente di sharingProhibited Apple).
+      multipleDevicesAndHoldersAllowedStatus: 'ONE_USER_ALL_DEVICES'
     };
 
     const logoUri = walletPublicBrandAssetUri(brand, 'logo');
@@ -334,7 +341,9 @@ function buildPassClass(brand, template) {
     classObj = {
       id: classId,
       issuerName: brand.name,
-      reviewStatus: getReviewStatus()
+      reviewStatus: getReviewStatus(),
+      // Badge personale: un solo account Google (equivalente di sharingProhibited Apple).
+      multipleDevicesAndHoldersAllowedStatus: 'ONE_USER_ALL_DEVICES'
     };
 
     const logoUri = walletPublicBrandAssetUri(brand, 'logo');
@@ -582,7 +591,7 @@ async function buildPassObject(brand, template, instance, memberHint) {
       ? {
         id: objectId,
         classId,
-        state: 'ACTIVE',
+        state: passObjectState(instance),
         accountId: instance.serial_number,
         textModulesData: [],
         linksModuleData: { uris: [] }
@@ -590,7 +599,7 @@ async function buildPassObject(brand, template, instance, memberHint) {
       : {
         id: objectId,
         classId,
-        state: 'ACTIVE',
+        state: passObjectState(instance),
         textModulesData: [],
         linksModuleData: { uris: [] }
       };
@@ -619,7 +628,7 @@ async function buildPassObject(brand, template, instance, memberHint) {
     ? {
       id: objectId,
       classId: classId,
-      state: 'ACTIVE',
+      state: passObjectState(instance),
       accountId: instance.serial_number,
       accountName: (`${firstName} ${lastName}`.trim() || 'Guest').slice(0, 64),
       barcode: {
@@ -633,7 +642,7 @@ async function buildPassObject(brand, template, instance, memberHint) {
     : {
       id: objectId,
       classId: classId,
-      state: 'ACTIVE',
+      state: passObjectState(instance),
       cardTitle: { defaultValue: { language: 'it', value: brand.name } },
       subheader: { defaultValue: { language: 'it', value: 'Membro' } },
       header: { defaultValue: { language: 'it', value: (`${firstName} ${lastName}`.trim() || 'Guest') } },
@@ -1058,8 +1067,29 @@ function getStatusInfo() {
   };
 }
 
+/**
+ * Aggiorna solo lo stato di un oggetto già salvato (es. EXPIRED alla revoca).
+ * Tenta genericObject e in fallback loyaltyObject: l'object id non codifica il kind.
+ */
+async function setPassObjectState(objectId, state) {
+  if (!isConfigured() || !objectId) return { skipped: true };
+  const body = { state: String(state || 'EXPIRED').toUpperCase() };
+  for (const path of ['genericObject', 'loyaltyObject']) {
+    try {
+      await walletApiPatch(`/${path}/${encodeURIComponent(objectId)}`, body);
+      return { updated: true, path };
+    } catch (err) {
+      const msg = String(err?.message || '');
+      if (!/404|not found/i.test(msg)) throw err;
+    }
+  }
+  return { updated: false, notFound: true };
+}
+
 module.exports = {
   isConfigured,
+  setPassObjectState,
+  passObjectState,
   getStatusInfo,
   getReviewStatus,
   sanitizeSlugForClassId,

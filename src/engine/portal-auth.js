@@ -107,7 +107,7 @@ async function verifyPortalToken(token) {
   if (!active) return null;
 
   const pass = await getPassInstance(decoded.pass_id);
-  if (!pass || pass.status === 'deleted') return null;
+  if (!pass || pass.status === 'deleted' || pass.status === 'revoked') return null;
   if (decoded.brand_id && pass.brand_id !== decoded.brand_id) return null;
 
   return {

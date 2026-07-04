@@ -542,6 +542,7 @@ async function getDb() {
     // pass_instances Ã¢ÂÂ columns added after initial schema
     await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS auth_token TEXT DEFAULT gen_random_uuid()::text`).catch(logSchemaError);
     await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ`).catch(logSchemaError);
     await pool.query(`ALTER TABLE pass_instances ADD COLUMN IF NOT EXISTS last_updated TIMESTAMPTZ DEFAULT NOW()`).catch(logSchemaError);
 
     // pass_instances Ã¢ÂÂ push tracking per pass
@@ -1911,9 +1912,9 @@ async function deleteMemberRecord(brandId, memberId) {
   const member = r.rows[0];
   if (!member) return null;
   const passId = member.pass_id || null;
-  if (passId) await deletePass(passId);
+  const revokedPass = passId ? await revokePass(passId) : null;
   await pool.query('DELETE FROM members WHERE id = $1 AND brand_id = $2', [memberId, brandId]);
-  return { deleted: true, member_id: memberId, pass_deleted: !!passId };
+  return { deleted: true, member_id: memberId, pass_revoked: !!revokedPass, revoked_pass: revokedPass };
 }
 
 async function importEmployeesBatch(brandId, employees, options = {}) {
@@ -2130,6 +2131,26 @@ async function countPasses(brandId, options = {}) {
   return result.rows[0]?.count ?? 0;
 }
 
+// Offboarding: il pass resta come guscio revocato (serial + auth_token) cosi'
+// Apple/Google possono servire la versione barrata/EXPIRED. Dati personali
+// azzerati, eventi eliminati (GDPR); device registrations conservate per
+// notificare l'aggiornamento (iOS le rimuove quando l'utente elimina il pass).
+async function revokePass(id) {
+  const pass = await getPassInstance(id);
+  if (!pass) return null;
+  await pool.query('DELETE FROM events WHERE pass_id = $1', [id]);
+  const r = await pool.query(
+    `UPDATE pass_instances
+       SET status = 'revoked', revoked_at = now(), field_values = '{}'::jsonb,
+           push_announcement = NULL, dynamic_link_url = NULL, dynamic_link_label = NULL,
+           last_updated = now()
+     WHERE id = $1
+     RETURNING *`,
+    [id]
+  );
+  return r.rows[0] || null;
+}
+
 async function deletePass(id) {
   const pass = await getPassInstance(id);
   if (!pass) return null;
@@ -2192,7 +2213,7 @@ async function getDevicesForBrand(brandId) {
     `SELECT DISTINCT dr.push_token, dr.device_library_id, dr.serial_number
      FROM device_registrations dr
      JOIN pass_instances pi ON dr.serial_number = pi.serial_number
-     WHERE pi.brand_id = $1`,
+     WHERE pi.brand_id = $1 AND pi.status IS DISTINCT FROM 'revoked'`,
     [brandId]
   );
   return result.rows;
@@ -4497,6 +4518,7 @@ module.exports = {
   createMemberRecord,
   updateMemberRecord,
   deleteMemberRecord,
+  revokePass,
   importEmployeesBatch,
   updatePassDynamicLinks,
   clearPassDynamicLinks,

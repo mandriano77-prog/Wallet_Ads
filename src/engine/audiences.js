@@ -485,19 +485,19 @@ async function getTargetPassesForPush(brandId, opts = {}) {
   if (rules && hasActiveRules(rules)) {
     const { whereExtra, params } = buildAudienceFilter(rules);
     const result = await pool.query(
-      `SELECT p.* FROM pass_instances p WHERE p.brand_id = $1${whereExtra}`,
+      `SELECT p.* FROM pass_instances p WHERE p.brand_id = $1 AND p.status IS DISTINCT FROM 'revoked'${whereExtra}`,
       [brandId, ...params]
     );
     return result.rows;
   }
   if (opts.campaign_id) {
     const result = await pool.query(
-      'SELECT * FROM pass_instances WHERE brand_id = $1 AND campaign_id = $2',
+      "SELECT * FROM pass_instances WHERE brand_id = $1 AND campaign_id = $2 AND status IS DISTINCT FROM 'revoked'",
       [brandId, opts.campaign_id]
     );
     return result.rows;
   }
-  const result = await pool.query('SELECT * FROM pass_instances WHERE brand_id = $1', [brandId]);
+  const result = await pool.query("SELECT * FROM pass_instances WHERE brand_id = $1 AND status IS DISTINCT FROM 'revoked'", [brandId]);
   return result.rows;
 }
 
@@ -509,7 +509,7 @@ async function getAppleDevicesForAudience(brandId, opts = {}) {
       `SELECT DISTINCT dr.push_token, dr.serial_number, dr.device_library_id
        FROM device_registrations dr
        JOIN pass_instances p ON dr.serial_number = p.serial_number
-       WHERE p.brand_id = $1
+       WHERE p.brand_id = $1 AND p.status IS DISTINCT FROM 'revoked'
          AND dr.push_token IS NOT NULL AND dr.push_token <> ''${whereExtra}`,
       [brandId, ...params]
     );
@@ -520,7 +520,7 @@ async function getAppleDevicesForAudience(brandId, opts = {}) {
       `SELECT DISTINCT dr.push_token, dr.serial_number, dr.device_library_id
        FROM device_registrations dr
        JOIN pass_instances pi ON dr.serial_number = pi.serial_number
-       WHERE pi.brand_id = $1 AND pi.campaign_id = $2`,
+       WHERE pi.brand_id = $1 AND pi.campaign_id = $2 AND pi.status IS DISTINCT FROM 'revoked'`,
       [brandId, opts.campaign_id]
     );
     return result.rows;
