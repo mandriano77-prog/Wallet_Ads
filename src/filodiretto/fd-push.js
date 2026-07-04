@@ -830,12 +830,7 @@
         return;
       }
       localStorage.setItem(TEST_PASS_KEY, passId);
-      var msg =
-        typeof buildPushDeliveryMessage === 'function'
-          ? buildPushDeliveryMessage(data)
-          : 'Push di prova inviata';
-      if (typeof toast === 'function') toast(msg);
-      else if (typeof toast === 'function') toast(msg);
+      showPushResultModal(data, { title: '✅ Push di prova inviata', intro: 'Consegna al solo dispositivo di test.' });
     } catch (e) {
       var failMsg = (e && e.name === 'AbortError')
         ? 'Invio non riuscito, riprova'
@@ -1118,7 +1113,7 @@
         return;
       }
       localStorage.setItem(TEST_PASS_KEY, passId);
-      if (typeof toast === 'function') toast('Prova inviata al dispositivo di test');
+      showPushResultModal(data, { title: '✅ Prova programmata inviata', intro: 'Consegna al solo dispositivo di test.' });
     } catch (err) {
       if (typeof toast === 'function') toast('Errore invio prova: ' + (err.message || err));
     } finally {
@@ -1128,6 +1123,108 @@
       }
     }
   }
+
+  // Report di consegna post-invio: popup centrale leggibile (il toast in basso
+  // sparisce troppo in fretta per un esito importante). Resta ~25s, chiudibile
+  // con X, Chiudi, Esc o click fuori; l'hover annulla la chiusura automatica.
+  var pushResultAutoCloseTimer = null;
+
+  function ensurePushResultModal() {
+    if (document.getElementById('fdPushResultModal')) return;
+    var wrap = document.createElement('div');
+    wrap.id = 'fdPushResultModal';
+    wrap.className = 'modal';
+    wrap.setAttribute('aria-hidden', 'true');
+    wrap.innerHTML =
+      '<div class="modal-content" style="max-width:520px">' +
+      '<button type="button" class="modal-close" data-fd-close="fdPushResultModal" aria-label="Chiudi">&times;</button>' +
+      '<div class="modal-header" id="fdPushResultTitle">Esito invio</div>' +
+      '<div id="fdPushResultBody" style="font-size:14px;line-height:1.65"></div>' +
+      '<div class="modal-actions">' +
+      '<button type="button" class="btn" id="fdPushResultClose">Chiudi</button>' +
+      '</div></div>';
+    document.body.appendChild(wrap);
+    setupFdModal(wrap);
+    function closeIt() {
+      if (pushResultAutoCloseTimer) { clearTimeout(pushResultAutoCloseTimer); pushResultAutoCloseTimer = null; }
+      closeFdModal('fdPushResultModal');
+    }
+    wrap.querySelector('[data-fd-close]').addEventListener('click', closeIt);
+    document.getElementById('fdPushResultClose').addEventListener('click', closeIt);
+    wrap.addEventListener('mouseenter', function () {
+      if (pushResultAutoCloseTimer) { clearTimeout(pushResultAutoCloseTimer); pushResultAutoCloseTimer = null; }
+    });
+  }
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function buildPushResultHtml(data, intro) {
+    var apnsSent = data.sent_apns != null ? data.sent_apns : (data.sent || 0);
+    var apnsTotal = data.total_apns != null ? data.total_apns : (data.total || 0);
+    var gw = data.google || {};
+    var sam = data.samsung || {};
+    var rows = [];
+    rows.push({ label: 'iPhone (Apple Wallet)', value: apnsSent + '/' + apnsTotal + ' consegnate', ok: apnsSent > 0 || apnsTotal === 0 });
+    rows.push(gw.skipped
+      ? { label: 'Google Wallet', value: 'non configurato', ok: true }
+      : { label: 'Google Wallet', value: (gw.updated || 0) + ' pass aggiornati', ok: (gw.errors || 0) === 0 });
+    if (sam && (sam.attempted || !sam.skipped)) {
+      rows.push(sam.skipped
+        ? { label: 'Samsung Wallet', value: 'non configurato o escluso', ok: true }
+        : { label: 'Samsung Wallet', value: (sam.notified || 0) + '/' + (sam.attempted || 0) + ' notificati', ok: true });
+    }
+    var html = '';
+    rows.forEach(function (r) {
+      html += '<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--fd-border,#e5e7eb)">' +
+        '<span style="color:var(--fd-color-text-muted,#64748b)">' + esc(r.label) + '</span>' +
+        '<strong style="white-space:nowrap">' + (r.ok ? '' : '⚠️ ') + esc(r.value) + '</strong></div>';
+    });
+    var fails = (data.apns_results || []).filter(function (r) { return !r.success; });
+    if (fails.length) {
+      html += '<div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--fd-color-danger-bg,#fef2f2);color:var(--fd-color-danger,#dc2626);font-size:13px">' +
+        '<strong>Errori APNs</strong><br>' +
+        fails.map(function (f) { return esc((f.token || '') + ': ' + (f.reason || f.error || 'unknown')); }).join('<br>') +
+        '</div>';
+    }
+    if (apnsTotal === 0) {
+      html += '<div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--fd-color-warning-bg,#fffbeb);color:var(--fd-color-warning-text,#a16207);font-size:13px">' +
+        'Nessun iPhone registrato per questo target: reinstalla il pass sul telefono e riprova.</div>';
+    } else if (apnsSent === 0) {
+      html += '<div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--fd-color-warning-bg,#fffbeb);color:var(--fd-color-warning-text,#a16207);font-size:13px">' +
+        'Invio partito ma nessuna consegna: controlla certificati APNs e token nel debug push.</div>';
+    }
+    if (intro) {
+      html = '<p style="margin:0 0 10px;color:var(--fd-color-text-body,#334155)">' + esc(intro) + '</p>' + html;
+    }
+    return html;
+  }
+
+  function showPushResultModal(data, opts) {
+    opts = opts || {};
+    try {
+      ensurePushResultModal();
+      var ok = ((data.sent_apns != null ? data.sent_apns : data.sent) || 0) > 0
+        || ((data.google && data.google.updated) || 0) > 0
+        || ((data.samsung && data.samsung.notified) || 0) > 0;
+      var titleEl = document.getElementById('fdPushResultTitle');
+      if (titleEl) titleEl.textContent = ok ? (opts.title || '✅ Push inviata') : '⚠️ Push senza consegne';
+      var bodyEl = document.getElementById('fdPushResultBody');
+      if (bodyEl) bodyEl.innerHTML = buildPushResultHtml(data, opts.intro || null);
+      openFdModal('fdPushResultModal');
+      if (pushResultAutoCloseTimer) clearTimeout(pushResultAutoCloseTimer);
+      pushResultAutoCloseTimer = setTimeout(function () {
+        pushResultAutoCloseTimer = null;
+        closeFdModal('fdPushResultModal');
+      }, 25000);
+    } catch (e) {
+      if (typeof toast === 'function' && typeof buildPushDeliveryMessage === 'function') toast(buildPushDeliveryMessage(data));
+    }
+  }
+  window.showPushResultModal = showPushResultModal;
 
   var fdModalOpeners = Object.create(null);
 
