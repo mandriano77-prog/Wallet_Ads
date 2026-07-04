@@ -709,7 +709,7 @@
         } else if (it.status !== 'connected') {
           action = '<button type="button" class="btn btn-sm" disabled title="Presto disponibile">Collega</button>';
         }
-        var logoSrc = it.logo_url || (it.domain ? 'https://logo.clearbit.com/' + it.domain : null);
+        var logoSrc = it.logo_url || (it.domain ? 'https://icons.duckduckgo.com/ip3/' + it.domain + '.ico' : null);
         const logo = logoSrc
           ? '<div class="extra-logo extra-logo--ph">' + esc((it.label || '?').charAt(0).toUpperCase())
               + '<img src="' + esc(logoSrc) + '" alt="" onerror="this.remove()"></div>'

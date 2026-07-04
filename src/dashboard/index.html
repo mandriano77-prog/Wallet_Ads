@@ -9022,12 +9022,16 @@ function extraColor(type) {
     return `hsl(${h} 55% 45%)`;
 }
 
+const EXTRA_NATIVE_ICONS = { ferie: '🏖️', welfare_credit: '💚', fringe_benefit: '🎁' };
 function extraLogoSrc(pr, cur) {
     if (cur && cur.logo_url) return cur.logo_url;           // logo custom incollato dall'admin
-    if (pr && pr.domain) return 'https://logo.clearbit.com/' + pr.domain; // logo ufficiale per dominio
+    // Logo ufficiale via favicon DuckDuckGo (Clearbit è stato dismesso nel 2025).
+    if (pr && pr.domain) return 'https://icons.duckduckgo.com/ip3/' + pr.domain + '.ico';
     return null;
 }
 function extraLogoInner(pr, cur) {
+    // Voci native (dati aziendali): emoji dedicata, non un "brand".
+    if (pr && pr.native && EXTRA_NATIVE_ICONS[pr.type]) return EXTRA_NATIVE_ICONS[pr.type];
     const mono = esc(extraMonogram((cur && cur.label) || pr.label));
     const src = extraLogoSrc(pr, cur);
     // Il monogramma è sotto; il logo lo copre. Se il logo non carica → onerror lo rimuove → resta il monogramma.
