@@ -6,11 +6,13 @@
  */
 'use strict';
 
-function makePlaceholderAdapter({ type, label, category = 'altro', native = false }) {
+function makePlaceholderAdapter({ type, label, category = 'altro', categories = null, native = false }) {
+  const cats = Array.isArray(categories) && categories.length ? categories : [category];
   return {
     type,
     defaultLabel: label,
-    defaultCategory: category,
+    defaultCategory: cats[0],
+    defaultCategories: cats,
     defaultMode: 'manual',
     native,
     async fetchState() { return { status: 'not_connected', data: {} }; },

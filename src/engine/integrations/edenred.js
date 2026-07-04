@@ -9,6 +9,7 @@ module.exports = {
   type: 'edenred',
   defaultLabel: 'Ticket Restaurant',
   defaultCategory: 'buoni_pasto',
+  defaultCategories: ['buoni_pasto', 'fringe'],
   defaultMode: 'manual',
 
   // Ritorna lo stato mostrato al dipendente. Fase 1: sempre da collegare.

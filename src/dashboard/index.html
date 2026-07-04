@@ -3231,14 +3231,34 @@
             </div>
 
             <!-- EXTRA — Integrazioni (fringe benefit / welfare) -->
+<style>
+/* Integrazioni — marketplace loghi + drawer */
+.extra-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+.extra-chip { padding:7px 14px; border-radius:999px; border:1px solid var(--border-default); background:var(--surface,#fff); color:var(--text2); font-size:13px; font-weight:600; cursor:pointer; }
+.extra-chip.is-active { background:var(--accent,#8B5CF6); border-color:var(--accent,#8B5CF6); color:#fff; }
+.extra-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; max-width:760px; }
+.extra-tile { position:relative; display:flex; flex-direction:column; align-items:center; gap:10px; padding:18px 12px; border:1px solid var(--border-default); border-radius:14px; background:var(--surface,#fff); cursor:pointer; transition:border-color .15s, box-shadow .15s; }
+.extra-tile:hover { border-color:var(--accent,#8B5CF6); box-shadow:0 4px 14px rgba(15,23,42,.08); }
+.extra-tile.is-active { border-color:var(--accent,#8B5CF6); }
+.extra-tile__logo { width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:18px; overflow:hidden; background:#94a3b8; }
+.extra-tile__logo img { width:100%; height:100%; object-fit:cover; }
+.extra-tile__name { font-size:13px; font-weight:600; color:var(--text1,#0f172a); text-align:center; }
+.extra-tile__badge { position:absolute; top:8px; right:8px; font-size:10px; font-weight:700; color:#047857; background:#ecfdf5; padding:2px 7px; border-radius:999px; }
+.extra-tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+.extra-tag { font-size:11px; font-weight:600; color:var(--text2); background:var(--bg-subtle,#f1f5f9); padding:2px 8px; border-radius:999px; }
+.extra-drawer-overlay { position:fixed; inset:0; z-index:600; background:rgba(15,23,42,.35); display:flex; justify-content:flex-end; }
+.extra-drawer-overlay[hidden] { display:none; }
+.extra-drawer { width:min(420px,92vw); height:100%; background:var(--surface,#fff); box-shadow:-8px 0 30px rgba(15,23,42,.2); padding:24px; overflow-y:auto; animation:extraDrawerIn .2s ease; }
+@keyframes extraDrawerIn { from{ transform:translateX(24px); opacity:0 } to{ transform:translateX(0); opacity:1 } }
+.extra-drawer__close { position:absolute; top:14px; right:18px; background:none; border:none; font-size:26px; line-height:1; color:var(--text2); cursor:pointer; }
+.extra-drawer__head { display:flex; gap:14px; align-items:center; margin-bottom:20px; }
+.extra-drawer__toggle { display:flex; align-items:center; gap:10px; font-weight:600; cursor:pointer; padding:12px 14px; border:1px solid var(--border-default); border-radius:10px; }
+</style>
             <div id="extra" class="section" data-rbac-section="conventions" hidden aria-hidden="true">
                 <h1 class="sec-title page-title">Integrazioni</h1>
                 <p style="color:var(--text2);font-size:13px;margin-bottom:16px;max-width:64ch;">Abilita i servizi che i dipendenti già usano — buoni pasto, fringe benefit, ferie e permessi: compaiono nella sezione <strong>EXTRA</strong> del loro portale e sul retro del pass. I dati si caricano via CSV o API dal gestionale.</p>
-                <div id="extraAdminList" style="display:grid;gap:12px;max-width:640px;"></div>
-                <div style="margin-top:16px;">
-                    <button type="button" class="btn" id="extraSaveBtn" onclick="saveExtraConfig()">Salva integrazioni</button>
-                    <span id="extraSaveStatus" style="margin-left:12px;font-size:13px;"></span>
-                </div>
+                <div class="extra-filters" id="extraFilters"></div>
+                <div class="extra-grid" id="extraGrid"></div>
                 <div class="card" style="margin-top:24px;padding:16px;max-width:640px;">
                     <h2 class="block-title" style="font-size:15px;margin:0 0 8px;">Import via API (gestionale)</h2>
                     <p style="color:var(--text2);font-size:13px;margin:0 0 12px;">Il tuo gestionale può caricare i dati (matricola, periodo, importo, link) automaticamente, senza CSV manuale. Genera una chiave API e usala nell'header <code>X-Api-Key</code>.</p>
@@ -3253,6 +3273,33 @@
                         <pre id="extraApiExample" style="background:var(--bg-subtle);padding:12px;border-radius:8px;font-size:11px;overflow:auto;margin-top:8px;"></pre>
                     </details>
                 </div>
+            </div>
+
+            <!-- Drawer configurazione integrazione -->
+            <div id="extraDrawerOverlay" class="extra-drawer-overlay" hidden onclick="closeExtraDrawer(event)">
+              <aside class="extra-drawer" role="dialog" aria-modal="true" aria-labelledby="extraDrawerTitle" onclick="event.stopPropagation()">
+                <button type="button" class="extra-drawer__close" aria-label="Chiudi" onclick="closeExtraDrawer()">&times;</button>
+                <div class="extra-drawer__head">
+                  <div class="extra-tile__logo" id="extraDrawerLogo"></div>
+                  <div>
+                    <h2 id="extraDrawerTitle" style="margin:0;font-size:18px;">—</h2>
+                    <div id="extraDrawerTags" class="extra-tags"></div>
+                  </div>
+                </div>
+                <label class="extra-drawer__toggle">
+                  <input type="checkbox" id="extraDrawerEnabled" onchange="toggleExtraProvider()">
+                  <span>Attiva questa integrazione</span>
+                </label>
+                <div class="form-group" style="margin-top:16px;">
+                  <label class="form-label">Logo (URL, opzionale)</label>
+                  <input type="text" id="extraDrawerLogoUrl" placeholder="https://…/logo.png" onchange="saveExtraDrawerLogo()" style="width:100%;">
+                  <p class="form-hint" style="font-size:11px;color:var(--text2);margin:4px 0 0;">Incolla l'URL del logo del provider per mostrarlo nella griglia e al dipendente.</p>
+                </div>
+                <div id="extraDrawerActive" style="margin-top:16px;">
+                  <button type="button" class="btn" id="extraDrawerImport" onclick="importFromDrawer()">Importa dati dipendenti</button>
+                  <p class="form-hint" id="extraDrawerStatus" style="font-size:12px;color:var(--text2);margin:10px 0 0;"></p>
+                </div>
+              </aside>
             </div>
 
             <!-- PGA CATALOG -->
@@ -8926,77 +8973,148 @@ async function saveGeofencing() {
 
 // --- EXTRA (integrazioni) admin ---
 let extraProvidersCache = null;
+const EXTRA_CATEGORIES = { buoni_pasto: 'Buoni pasto', fringe: 'Fringe benefit', ferie: 'Ferie e permessi', altro: 'Altri servizi' };
+let extraActiveMap = new Map();   // type -> config (solo attivi + logo)
+let extraFilter = 'all';
+let extraDrawerType = null;
+
 async function loadExtraAdmin() {
     if (!brandId) return;
-    const host = document.getElementById('extraAdminList');
-    if (host) host.innerHTML = '<p style="color:var(--text2)">Caricamento…</p>';
+    const grid = document.getElementById('extraGrid');
+    if (grid) grid.innerHTML = '<p style="color:var(--text2);grid-column:1/-1">Caricamento…</p>';
     try {
         const data = await fetch(`${API}/brands/${brandId}/integrations`, { headers: getAuthHeaders() }).then(r => r.json());
         extraProvidersCache = data.available_providers || [];
-        const active = new Map((data.integrations || []).map(it => [it.type, it]));
-        renderExtraAdmin(extraProvidersCache, active);
+        extraActiveMap = new Map((data.integrations || []).filter(it => it.enabled).map(it => [it.type, it]));
+        renderExtraFilters();
+        renderExtraGrid();
         loadExtraApiKeyStatus();
     } catch (e) {
-        if (host) host.innerHTML = '<p style="color:var(--red)">Errore caricamento integrazioni</p>';
+        if (grid) grid.innerHTML = '<p style="color:var(--red);grid-column:1/-1">Errore caricamento integrazioni</p>';
     }
 }
 
-const EXTRA_CATEGORIES = { buoni_pasto: 'Buoni pasto', fringe: 'Fringe benefit', ferie: 'Ferie e permessi', altro: 'Altri servizi' };
+function extraProviderCategories(pr) {
+    return (pr && pr.categories && pr.categories.length) ? pr.categories : [pr.category || 'altro'];
+}
 
-function renderExtraAdmin(providers, active) {
-    const host = document.getElementById('extraAdminList');
+function renderExtraFilters() {
+    const host = document.getElementById('extraFilters');
     if (!host) return;
-    if (!providers.length) { host.innerHTML = '<p style="color:var(--text2)">Nessun provider disponibile.</p>'; return; }
-    // Raggruppa per macro-sezione: Buoni pasto · Fringe benefit · Ferie e permessi.
-    const order = ['buoni_pasto', 'fringe', 'ferie', 'altro'];
-    let html = '';
-    order.forEach(cat => {
-        const inCat = providers.filter(pr => (pr.category || 'altro') === cat);
-        if (!inCat.length) return;
-        html += `<h2 class="block-title" style="font-size:14px;margin:20px 0 10px;">${esc(EXTRA_CATEGORIES[cat] || cat)}</h2>`;
-        html += '<div style="display:grid;gap:10px;">' + inCat.map(pr => {
-            const cur = active.get(pr.type) || {};
-            const on = cur.enabled === true;
-            const importBtn = on
-                ? `<button type="button" class="btn small sec" onclick="openExtraImport('${pr.type}','${esc(cur.label || pr.label)}')">Importa dati dipendenti</button>`
-                : '';
-            return `<div class="card" style="padding:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;" data-extra-type="${pr.type}" data-extra-cat="${cat}">
-                <label style="display:flex;align-items:center;gap:10px;flex:1;min-width:180px;cursor:pointer;">
-                    <input type="checkbox" data-extra-enabled ${on?'checked':''}>
-                    <strong>${esc(cur.label || pr.label)}</strong>
-                </label>
-                ${importBtn}
-            </div>`;
-        }).join('') + '</div>';
-    });
-    host.innerHTML = html;
+    const cats = new Set();
+    extraProvidersCache.forEach(pr => extraProviderCategories(pr).forEach(c => cats.add(c)));
+    const order = ['buoni_pasto', 'fringe', 'ferie', 'altro'].filter(c => cats.has(c));
+    const chips = [['all', 'Tutti']].concat(order.map(c => [c, EXTRA_CATEGORIES[c] || c]));
+    host.innerHTML = chips.map(([k, v]) =>
+        `<button type="button" class="extra-chip${extraFilter===k?' is-active':''}" onclick="setExtraFilter('${k}')">${esc(v)}</button>`
+    ).join('');
 }
 
-async function saveExtraConfig() {
-    if (!brandId) return toast('Seleziona un brand');
-    const rows = document.querySelectorAll('#extraAdminList [data-extra-type]');
-    const integrations = [];
-    rows.forEach(row => {
-        const type = row.getAttribute('data-extra-type');
-        const enabled = row.querySelector('[data-extra-enabled]')?.checked;
-        const category = row.getAttribute('data-extra-cat') || 'altro';
-        const prov = (extraProvidersCache || []).find(p => p.type === type) || {};
-        integrations.push({ type, enabled: !!enabled, category, label: prov.label, mode: 'manual' });
+function setExtraFilter(f) { extraFilter = f; renderExtraFilters(); renderExtraGrid(); }
+
+function extraMonogram(name) {
+    const clean = String(name || '?').replace(/[^A-Za-z0-9 ]/g, '').trim();
+    const parts = clean.split(/\s+/);
+    return (parts.length > 1 ? (parts[0][0] + parts[1][0]) : clean.slice(0, 2)).toUpperCase();
+}
+function extraColor(type) {
+    let h = 0; for (let i = 0; i < type.length; i++) h = (h * 31 + type.charCodeAt(i)) % 360;
+    return `hsl(${h} 55% 45%)`;
+}
+
+function extraTileLogo(pr, cur) {
+    const logo = (cur && cur.logo_url) || null;
+    if (logo) return `<div class="extra-tile__logo"><img src="${esc(logo)}" alt=""></div>`;
+    return `<div class="extra-tile__logo" style="background:${extraColor(pr.type)}">${esc(extraMonogram(cur && cur.label || pr.label))}</div>`;
+}
+
+function renderExtraGrid() {
+    const grid = document.getElementById('extraGrid');
+    if (!grid) return;
+    const list = extraProvidersCache.filter(pr =>
+        extraFilter === 'all' || extraProviderCategories(pr).includes(extraFilter));
+    if (!list.length) { grid.innerHTML = '<p style="color:var(--text2);grid-column:1/-1">Nessuna integrazione in questa categoria.</p>'; return; }
+    grid.innerHTML = list.map(pr => {
+        const cur = extraActiveMap.get(pr.type);
+        const on = !!cur;
+        return `<button type="button" class="extra-tile${on?' is-active':''}" onclick="openExtraDrawer('${pr.type}')">
+            ${extraTileLogo(pr, cur)}
+            <span class="extra-tile__name">${esc((cur && cur.label) || pr.label)}</span>
+            ${on ? '<span class="extra-tile__badge">Attiva</span>' : ''}
+        </button>`;
+    }).join('');
+}
+
+function openExtraDrawer(type) {
+    const pr = extraProvidersCache.find(p => p.type === type);
+    if (!pr) return;
+    extraDrawerType = type;
+    const cur = extraActiveMap.get(type);
+    const on = !!cur;
+    document.getElementById('extraDrawerTitle').textContent = (cur && cur.label) || pr.label;
+    const logoBox = document.getElementById('extraDrawerLogo');
+    const logo = cur && cur.logo_url;
+    logoBox.innerHTML = logo ? `<img src="${esc(logo)}" alt="">` : esc(extraMonogram((cur && cur.label) || pr.label));
+    logoBox.style.background = logo ? 'transparent' : extraColor(type);
+    document.getElementById('extraDrawerTags').innerHTML = extraProviderCategories(pr)
+        .map(c => `<span class="extra-tag">${esc(EXTRA_CATEGORIES[c] || c)}</span>`).join('');
+    document.getElementById('extraDrawerEnabled').checked = on;
+    document.getElementById('extraDrawerLogoUrl').value = (cur && cur.logo_url) || '';
+    document.getElementById('extraDrawerActive').style.display = on ? '' : 'none';
+    document.getElementById('extraDrawerStatus').textContent = on ? 'Integrazione attiva. Carica i dati dei dipendenti via CSV o API.' : '';
+    document.getElementById('extraDrawerOverlay').hidden = false;
+}
+
+function closeExtraDrawer(ev) {
+    if (ev && ev.target && ev.target.id && ev.target.id !== 'extraDrawerOverlay' && ev.type === 'click' && ev.target !== ev.currentTarget) return;
+    document.getElementById('extraDrawerOverlay').hidden = true;
+    extraDrawerType = null;
+}
+
+async function persistExtra() {
+    const integrations = Array.from(extraActiveMap.values()).map(c => ({
+        type: c.type, enabled: true, label: c.label, mode: 'manual', logo_url: c.logo_url || undefined
+    }));
+    const res = await fetch(`${API}/brands/${brandId}/integrations`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ integrations })
     });
-    const status = document.getElementById('extraSaveStatus');
-    if (status) { status.textContent = 'Salvataggio…'; status.style.color = 'var(--text2)'; }
-    try {
-        const res = await fetch(`${API}/brands/${brandId}/integrations`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-            body: JSON.stringify({ integrations })
-        });
-        const data = await res.json();
-        if (!res.ok || data.error) throw new Error(data.error || 'Errore');
-        if (status) { status.textContent = 'Salvato ✓'; status.style.color = 'var(--green)'; }
-        toast('Integrazioni salvate');
-    } catch (e) {
-        if (status) { status.textContent = 'Errore: ' + e.message; status.style.color = 'var(--red)'; }
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Errore');
+}
+
+async function toggleExtraProvider() {
+    if (!extraDrawerType) return;
+    const pr = extraProvidersCache.find(p => p.type === extraDrawerType);
+    const enabled = document.getElementById('extraDrawerEnabled').checked;
+    if (enabled) {
+        const prev = extraActiveMap.get(extraDrawerType) || {};
+        extraActiveMap.set(extraDrawerType, { type: extraDrawerType, label: pr.label, logo_url: prev.logo_url });
+    } else {
+        extraActiveMap.delete(extraDrawerType);
     }
+    try {
+        await persistExtra();
+        document.getElementById('extraDrawerActive').style.display = enabled ? '' : 'none';
+        document.getElementById('extraDrawerStatus').textContent = enabled ? 'Integrazione attiva. Carica i dati dei dipendenti via CSV o API.' : '';
+        renderExtraGrid();
+        toast(enabled ? 'Integrazione attivata' : 'Integrazione disattivata');
+    } catch (e) { toast('Errore: ' + e.message); }
+}
+
+async function saveExtraDrawerLogo() {
+    if (!extraDrawerType || !extraActiveMap.has(extraDrawerType)) return;
+    const url = (document.getElementById('extraDrawerLogoUrl').value || '').trim();
+    const cur = extraActiveMap.get(extraDrawerType);
+    cur.logo_url = url || undefined;
+    extraActiveMap.set(extraDrawerType, cur);
+    try { await persistExtra(); renderExtraGrid(); openExtraDrawer(extraDrawerType); } catch (e) { toast('Errore: ' + e.message); }
+}
+
+function importFromDrawer() {
+    if (!extraDrawerType) return;
+    const pr = extraProvidersCache.find(p => p.type === extraDrawerType);
+    openExtraImport(extraDrawerType, (extraActiveMap.get(extraDrawerType) || {}).label || pr.label);
 }
 
 // Import CSV dati dipendenti (caricato + link personale) per un provider.

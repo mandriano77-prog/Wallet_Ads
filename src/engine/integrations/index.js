@@ -34,7 +34,7 @@ for (const pl of PLACEHOLDERS) {
 
 // Voci NATIVE: non provider terzi, ma dati aziendali (ferie, ecc.) sullo stesso
 // rail. native:true → il portale le rende come widget-dato, non come brand.
-ADAPTERS.ferie = makePlaceholderAdapter({ type: 'ferie', label: 'Ferie e permessi', category: 'ferie', native: true });
+ADAPTERS.ferie = makePlaceholderAdapter({ type: 'ferie', label: 'Ferie e permessi', categories: ['ferie'], native: true });
 
 /** Categorie note per raggruppare le card nel portale. */
 const CATEGORIES = Object.freeze({
@@ -55,11 +55,13 @@ function enabledIntegrations(brandConfig = {}) {
     .filter((it) => it && it.enabled && getAdapter(it.type))
     .map((it) => {
       const adapter = getAdapter(it.type);
-      const category = CATEGORIES[it.category] ? it.category : (adapter.defaultCategory || 'altro');
+      const categories = adapter.defaultCategories || [adapter.defaultCategory || 'altro'];
+      const category = categories[0];
       return {
         type: it.type,
         label: String(it.label || adapter.defaultLabel || it.type).slice(0, 80),
         category,
+        categories,
         category_label: CATEGORIES[category],
         logo_url: it.logo_url || null,
         mode: ['manual', 'deeplink', 'api'].includes(it.mode) ? it.mode : 'api',
@@ -75,6 +77,8 @@ function availableProviders() {
     type: a.type,
     label: a.defaultLabel,
     category: a.defaultCategory,
+    categories: a.defaultCategories || [a.defaultCategory],
+    native: !!a.native,
   }));
 }
 
