@@ -107,6 +107,17 @@ async function bulkUpsertByEmployeeId(brandId, type, rows) {
     // aggiornando il mese se già presente. currency/personal_url sono a livello top.
     const existing = await getMemberIntegration(member.id, type);
     const data = (existing && existing.data && typeof existing.data === 'object') ? { ...existing.data } : {};
+
+    // Voce nativa ferie: mappa ferie/permessi residui (giorni), non importi.
+    if (type === 'ferie') {
+      if (row.ferie != null && row.ferie !== '') data.ferie_residue = Number(String(row.ferie).replace(',', '.'));
+      if (row.permessi != null && row.permessi !== '') data.permessi_residue = Number(String(row.permessi).replace(',', '.'));
+      data.updated_label = row.period ? String(row.period) : new Date().toLocaleDateString('it-IT');
+      await upsertMemberIntegration({ member_id: member.id, brand_id: brandId, type, status: 'connected', data });
+      updated += 1;
+      continue;
+    }
+
     data.currency = row.currency || data.currency || 'EUR';
     if (row.personal_url) data.personal_url = String(row.personal_url).slice(0, 1000);
 

@@ -659,6 +659,22 @@
     host.innerHTML = groups.map(function (g) {
       const cards = g.items.map(function (it) {
         const st = extraStatusLabel(it.status);
+        // Voce nativa ferie: due numeri (giorni ferie + permessi), niente importi.
+        if (it.native && it.type === 'ferie') {
+          const fr = it.data && it.data.ferie_residue;
+          const pe = it.data && it.data.permessi_residue;
+          const upd = it.data && it.data.updated_label ? '<span class="extra-period">Aggiornato al ' + esc(it.data.updated_label) + '</span>' : '';
+          const has = (fr != null) || (pe != null);
+          const body = has
+            ? '<div class="extra-leave">'
+                + (fr != null ? '<div class="extra-leave__item"><strong>' + esc(formatMoney(fr)) + '</strong><span>giorni ferie</span></div>' : '')
+                + (pe != null ? '<div class="extra-leave__item"><strong>' + esc(formatMoney(pe)) + '</strong><span>permessi</span></div>' : '')
+              + '</div>' + upd
+            : '<span class="extra-status extra-status--muted">In attesa di aggiornamento</span>';
+          const logoF = '<div class="extra-logo extra-logo--ph">🏖️</div>';
+          return '<div class="extra-card">' + logoF
+            + '<div class="extra-card__body"><div class="extra-card__label">' + esc(it.label) + '</div>' + body + '</div></div>';
+        }
         const cur = it.data.currency || 'EUR';
         const amount = it.data && (it.data.loaded_amount != null ? it.data.loaded_amount : it.data.balance);
         let balance = '';

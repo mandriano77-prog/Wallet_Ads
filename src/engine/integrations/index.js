@@ -32,8 +32,13 @@ for (const pl of PLACEHOLDERS) {
   if (!ADAPTERS[pl.type]) ADAPTERS[pl.type] = makePlaceholderAdapter(pl);
 }
 
+// Voci NATIVE: non provider terzi, ma dati aziendali (ferie, ecc.) sullo stesso
+// rail. native:true → il portale le rende come widget-dato, non come brand.
+ADAPTERS.ferie = makePlaceholderAdapter({ type: 'ferie', label: 'Ferie e permessi', category: 'ferie', native: true });
+
 /** Categorie note per raggruppare le card nel portale. */
 const CATEGORIES = Object.freeze({
+  ferie: 'Ferie e permessi',
   buoni_pasto: 'Buoni pasto',
   welfare: 'Welfare',
   mobilita: 'Mobilità',
@@ -60,6 +65,7 @@ function enabledIntegrations(brandConfig = {}) {
         logo_url: it.logo_url || null,
         mode: ['manual', 'deeplink', 'api'].includes(it.mode) ? it.mode : 'api',
         deeplink_url: it.deeplink_url || null,
+        native: !!adapter.native,
       };
     });
 }

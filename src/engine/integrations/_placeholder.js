@@ -6,12 +6,13 @@
  */
 'use strict';
 
-function makePlaceholderAdapter({ type, label, category = 'altro' }) {
+function makePlaceholderAdapter({ type, label, category = 'altro', native = false }) {
   return {
     type,
     defaultLabel: label,
     defaultCategory: category,
     defaultMode: 'manual',
+    native,
     async fetchState() { return { status: 'not_connected', data: {} }; },
     async connect() { const e = new Error('Collegamento API non ancora disponibile per ' + label); e.statusCode = 501; throw e; },
     async disconnect() {},

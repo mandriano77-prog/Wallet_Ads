@@ -8941,7 +8941,7 @@ async function loadExtraAdmin() {
     }
 }
 
-const EXTRA_CATEGORIES = { buoni_pasto: 'Buoni pasto', welfare: 'Welfare', mobilita: 'Mobilità', altro: 'Altri servizi' };
+const EXTRA_CATEGORIES = { ferie: 'Ferie e permessi', buoni_pasto: 'Buoni pasto', welfare: 'Welfare', mobilita: 'Mobilità', altro: 'Altri servizi' };
 
 function renderExtraAdmin(providers, active) {
     const host = document.getElementById('extraAdminList');
@@ -9030,7 +9030,9 @@ function parseExtraCsv(text) {
     const iM = header.findIndex(h => /matricola|badge|employee/.test(h));
     const iA = header.findIndex(h => /importo|caricato|amount|saldo/.test(h));
     const iL = header.findIndex(h => /link|url|conto/.test(h));
-    const iP = header.findIndex(h => /periodo|mese|month|period/.test(h));
+    const iP = header.findIndex(h => /periodo|mese|month|period|aggiorn/.test(h));
+    const iFe = header.findIndex(h => /^ferie|ferie/.test(h));
+    const iPe = header.findIndex(h => /permess|rol/.test(h));
     const iE = header.findIndex(h => /scadenza|expire/.test(h));
     if (iM < 0) return [];
     const rows = [];
@@ -9042,6 +9044,8 @@ function parseExtraCsv(text) {
         if (iA >= 0 && c[iA]) row.amount = c[iA].replace(',', '.');
         if (iL >= 0 && c[iL]) row.personal_url = c[iL];
         if (iP >= 0 && c[iP]) row.period = c[iP];
+        if (iFe >= 0 && c[iFe]) row.ferie = c[iFe];
+        if (iPe >= 0 && c[iPe]) row.permessi = c[iPe];
         if (iE >= 0 && c[iE]) row.expires_at = c[iE];
         rows.push(row);
     }

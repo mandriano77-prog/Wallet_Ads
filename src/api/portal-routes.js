@@ -201,6 +201,7 @@ router.get('/me/integrations', async (req, res) => {
         category_label: it.category_label,
         logo_url: it.logo_url,
         mode: it.mode,
+        native: it.native,
         deeplink_url: it.deeplink_url,
         status: st?.status || 'not_connected',
         data: st?.data || {},
@@ -209,7 +210,7 @@ router.get('/me/integrations', async (req, res) => {
     });
 
     // Raggruppa per categoria mantenendo l'ordine di CATEGORIES.
-    const order = ['buoni_pasto', 'welfare', 'mobilita', 'altro'];
+    const order = ['ferie', 'buoni_pasto', 'welfare', 'mobilita', 'altro'];
     const groups = [];
     for (const cat of order) {
       const inCat = items.filter((i) => i.category === cat);

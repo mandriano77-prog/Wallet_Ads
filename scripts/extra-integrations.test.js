@@ -103,3 +103,13 @@ test('catalogo provider completo (buoni pasto + welfare)', () => {
   assert.equal(byType.coverflex, 'welfare');
   assert.equal(byType.pluxee, 'buoni_pasto');
 });
+
+test('Ferie: voce nativa con categoria e flag native', () => {
+  const a = getAdapter('ferie');
+  assert.ok(a, 'adapter ferie presente');
+  assert.equal(a.native, true);
+  const en = enabledIntegrations({ integrations: [{ type: 'ferie', enabled: true }] });
+  assert.equal(en[0].category, 'ferie');
+  assert.equal(en[0].category_label, 'Ferie e permessi');
+  assert.equal(en[0].native, true);
+});
