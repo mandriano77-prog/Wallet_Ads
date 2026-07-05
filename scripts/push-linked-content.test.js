@@ -55,3 +55,23 @@ test('senza publicBaseUrl (chiamanti legacy): nessun crash, catena classica', ()
   const link = resolveVariableLink(INSTANCE, TEMPLATE, { instantWinActive: { game_type: 'wheel' } });
   assert.equal(link, null, 'senza base URL il gioco non può costruire il link');
 });
+
+test('dispatch: le chiavi config si azzerano con null, mai con delete (updateBrand fa merge)', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src/engine/push-dispatch.js'), 'utf-8');
+  // 'delete config.X' locale non rimuove la chiave dal DB: il merge di
+  // updateBrand la fa risorgere (bug: la Ruota di ieri vinceva sul puzzle di oggi).
+  assert.ok(!/delete config\.(instantWinActive|gamificationActive|pushAnnouncement|stripOverride|pushLinkOut)/.test(src),
+    'niente delete sulle chiavi config che devono azzerarsi');
+  assert.match(src, /config\.instantWinActive = null/);
+  assert.match(src, /config\.gamificationActive = null/);
+  assert.match(src, /config\.pushLinkOut = null/);
+});
+
+test('resolveVariableLink: flag null (azzerato) non attiva il gioco', () => {
+  const link = resolveVariableLink(INSTANCE, TEMPLATE,
+    { instantWinActive: null, gamificationActive: { label: 'Puzzle!', game_type: 'puzzle' } },
+    { publicBaseUrl: 'https://studio.test' });
+  assert.equal(link.url, 'https://studio.test/game/puzzle/SN-GAME-1', 'null saltato, puzzle attivo');
+});

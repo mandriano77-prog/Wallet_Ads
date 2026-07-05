@@ -257,13 +257,15 @@ async function executeWalletPush(body, ctx = {}) {
       back_details
     );
 
-    if (!instant_win_id) delete config.instantWinActive;
-    if (!gamification_id) delete config.gamificationActive;
+    // updateBrand fa merge della config: 'delete' locale non rimuove mai la
+    // chiave dal DB (il vecchio gioco resterebbe attivo per sempre). null si'.
+    if (!instant_win_id) config.instantWinActive = null;
+    if (!gamification_id) config.gamificationActive = null;
 
     const pushStripB64 = ctx.resolvedStripBase64 || null;
     overlayStrip = pushStripB64 || null;
-    delete config.pushAnnouncement;
-    delete config.stripOverride;
+    config.pushAnnouncement = null;
+    config.stripOverride = null;
 
     // Contenuto collegato (gioco) = padrone del Link 1: sostituisce qualsiasi
     // link manuale ("o uno o l'altro"). Il link per-serial lo costruisce
@@ -291,12 +293,12 @@ async function executeWalletPush(body, ctx = {}) {
     const passIds = targetPasses.map((p) => p.id);
     if (passLink) {
       await updatePassDynamicLinks(passIds, passLink);
-      delete config.pushLinkOut;
+      config.pushLinkOut = null;
     } else if (passIds.length) {
       await clearPassDynamicLinks(passIds);
-      delete config.pushLinkOut;
+      config.pushLinkOut = null;
     } else {
-      delete config.pushLinkOut;
+      config.pushLinkOut = null;
     }
 
     if (pushStripB64 && !hrDeploy) {
