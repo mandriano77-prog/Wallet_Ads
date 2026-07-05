@@ -42,3 +42,12 @@ test('play page: vincita HR mostra i coin accreditati', () => {
   assert.match(page, /coins_awarded/, 'risposta coin gestita');
   assert.match(page, /coin accreditati sul tuo pass/, 'messaggio accredito');
 });
+
+test('pagine gioco: API base /api/v1 (il router non è montato su /api)', () => {
+  for (const page of ['quiz', 'memory', 'puzzle']) {
+    const src = fs.readFileSync(path.join(__dirname, '..', `src/game/${page}.html`), 'utf-8');
+    assert.match(src, /const API = '\/api\/v1';/, `${page}.html deve usare /api/v1`);
+  }
+  const play = fs.readFileSync(path.join(__dirname, '..', 'src/play/index.html'), 'utf-8');
+  assert.match(play, /const API = '\/api\/v1';/);
+});
