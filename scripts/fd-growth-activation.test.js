@@ -77,6 +77,6 @@ test('Push preview and unified channel segmented control', () => {
 
 test('index.html bundle cache references current Filo bundle tag', () => {
   const html = read('src/dashboard/index.html');
-  assert.match(html, /fd\.bundle\.css\?v=20260705-histmenu/);
-  assert.match(html, /fd\.bundle\.js\?v=20260705-histmenu/);
+  assert.match(html, /fd\.bundle\.css\?v=20260705-retropass/);
+  assert.match(html, /fd\.bundle\.js\?v=20260705-retropass/);
 });

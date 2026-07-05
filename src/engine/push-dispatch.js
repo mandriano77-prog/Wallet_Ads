@@ -312,6 +312,8 @@ async function executeWalletPush(body, ctx = {}) {
           campaign_id: iwCampaign.id,
           label: iwCampaign.push_message || iwCampaign.name || 'Gioca e Vinci!',
           game_type: iwCampaign.game_type,
+          // Scadenza del Link 1: vale anche per il contenuto collegato.
+          ...(pass_link_expires_at ? { expires_at: pass_link_expires_at } : {}),
         };
         if (!overlayStrip && iwCampaign.strip_base64) {
           overlayStrip = iwCampaign.strip_base64;
@@ -327,6 +329,7 @@ async function executeWalletPush(body, ctx = {}) {
           campaign_id: gamCampaign.id,
           label: gamCampaign.push_message || gamCampaign.name || 'Gioca ora!',
           game_type: gamCampaign.game_type,
+          ...(pass_link_expires_at ? { expires_at: pass_link_expires_at } : {}),
         };
         if (!overlayStrip && gamCampaign.strip_base64) {
           overlayStrip = gamCampaign.strip_base64;

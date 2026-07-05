@@ -25,8 +25,8 @@
             var fdLegacyMediaHide = document.createElement('style');
             fdLegacyMediaHide.textContent = "html[data-app='filodiretto'] #media-library #a2wMediaTabs{display:none!important}";
             document.head.appendChild(fdLegacyMediaHide);
-            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260705-histmenu';
-            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260705-histmenu';
+            var fdBundleCss = '/filodiretto/fd.bundle.css?v=20260705-retropass';
+            var fdBundleJs = '/filodiretto/fd.bundle.js?v=20260705-retropass';
             var fdCss = ['/filodiretto/tokens.css', '/filodiretto/fd-theme.css', '/filodiretto/fd-typography.css', '/filodiretto/fd-buttons.css', '/filodiretto/fd-components.css', '/filodiretto/fd-header.css', '/filodiretto/fd-layout.css', '/filodiretto/fd-wide-layout.css', '/filodiretto/fd-mobile-gate.css', '/filodiretto/fd-wai.css', '/filodiretto/fd-brand-switcher.css', '/filodiretto/fd-nav.css', '/filodiretto/fd-brand-identity.css', '/filodiretto/fd-brand-scope.css', '/filodiretto/fd-home.css', '/filodiretto/fd-users.css', '/filodiretto/fd-contacts.css', '/filodiretto/fd-media-library.css', '/filodiretto/fd-destructive.css', '/filodiretto/fd-form-dirty.css', '/filodiretto/fd-form-help.css', '/filodiretto/fd-empty-states.css', '/filodiretto/fd-page-states.css', '/filodiretto/fd-danger-zone.css', '/filodiretto/fd-push.css', '/filodiretto/fd-reward-challenge.css', '/filodiretto/fd-analytics.css', '/filodiretto/fd-audiences.css', '/filodiretto/fd-conventions.css', '/filodiretto/fd-pga.css', '/filodiretto/fd-activity-log.css', '/filodiretto/fd-responsive-tables.css'];
             var fdJs = ['/filodiretto/fd-buttons.js', '/filodiretto/fd-header.js', '/filodiretto/fd-layout.js', '/filodiretto/fd-mobile-gate.js', '/filodiretto/fd-wai.js', '/filodiretto/fd-brand-switcher.js', '/filodiretto/fd-icons.js', '/filodiretto/fd-nav.js', '/filodiretto/fd-legacy-campaigns.js', '/filodiretto/fd-hr-copy.js', '/filodiretto/fd-brand-scope.js', '/filodiretto/fd-brand-identity.js', '/filodiretto/fd-brand-pass-flow.js', '/filodiretto/fd-home.js', '/filodiretto/fd-users.js', '/filodiretto/fd-contacts.js', '/filodiretto/fd-media-library.js', '/filodiretto/fd-templates.js', '/filodiretto/fd-passes.js', '/filodiretto/fd-destructive.js', '/filodiretto/fd-form-dirty.js', '/filodiretto/fd-form-help.js', '/filodiretto/fd-form-a11y.js', '/filodiretto/fd-empty-states.js', '/filodiretto/fd-page-states.js', '/filodiretto/fd-danger-zone.js', '/filodiretto/fd-rbac.js', '/filodiretto/fd-push.js', '/filodiretto/fd-reward-challenge.js', '/filodiretto/fd-analytics.js', '/filodiretto/fd-audiences.js', '/filodiretto/fd-conventions.js', '/filodiretto/fd-pga.js', '/filodiretto/fd-pga-engagement.js', '/filodiretto/fd-activity-log.js', '/filodiretto/fd-responsive-tables.js', '/filodiretto/fd-profile.js'];
             var useFdBundle = window.location.search.indexOf('fd_nobundle') === -1;
@@ -1791,7 +1791,9 @@
                             </div>
                         </div>
                         <div id="pushPassLinkFields" style="display:block;margin-top:16px;">
-                            <div class="sec-title" style="font-size:14px;margin-bottom:10px;">Retro pass</div>
+                            <div class="sec-title" style="font-size:14px;margin-bottom:6px;">Retro pass</div>
+                            <p style="font-size:12px;color:var(--text2);margin:0 0 12px;line-height:1.5;">Il retro ha <strong>un link principale</strong>: puoi <strong>A)</strong> scriverlo tu, oppure <strong>B)</strong> collegare un contenuto (Reward, Challenge, Convenzione) — <strong>o uno o l'altro</strong>. Scadenza e Messaggio retro valgono in entrambi i casi.</p>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text2);text-transform:uppercase;margin-bottom:6px;">A · Link scritto da te</div>
                             <div class="form-group">
                                 <label class="form-label" for="pushPassLinkUrl">Link (https://)</label>
                                 <input type="url" id="pushPassLinkUrl" placeholder="https://..." oninput="syncPushPassLinkLabel()">
@@ -1800,16 +1802,24 @@
                                 <label class="form-label" for="pushPassLinkLabel">CTA link (etichetta)</label>
                                 <input type="text" id="pushPassLinkLabel" maxlength="64" placeholder="es. Compila il questionario">
                             </div>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text2);text-transform:uppercase;margin:14px 0 6px;">B · Contenuto collegato</div>
                             <div class="form-group">
-                                <label class="form-label">Scadenza link</label>
-                                <input type="datetime-local" id="pushPassLinkExpires">
+                                <select id="pushLinkedContent" aria-label="Collega contenuto">
+                                    <option value="">— Nessuno —</option>
+                                </select>
+                                <p style="font-size:11px;color:var(--orange);margin-top:4px;display:none;" id="pushLinkedContentActiveHint">Contenuto collegato attivo: i campi del link manuale (A) sono disattivati.</p>
                             </div>
-                            <p style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.4;">Se compili URL + etichetta, il link compare in cima al retro del pass (prima di HUB / SUPPORT / AREA PRIVATA) fino alla scadenza.</p>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text2);text-transform:uppercase;margin:14px 0 6px;">Vale per entrambi (A e B)</div>
+                            <div class="form-group">
+                                <label class="form-label">Scadenza del link</label>
+                                <input type="datetime-local" id="pushPassLinkExpires">
+                                <p class="form-hint" style="margin:4px 0 0;font-size:11px;color:var(--text2);">Dopo questa data il Link 1 sparisce dal retro — sia il link manuale sia il contenuto collegato.</p>
+                            </div>
                         </div>
                         <div class="form-group" style="margin-top:8px;">
                             <label class="form-label" for="pushBackDetails">Messaggio retro</label>
                             <textarea id="pushBackDetails" rows="4" maxlength="500" placeholder="es. Offerta valida fino al 31/12. Non cumulabile con altre promozioni." style="resize:vertical;" aria-describedby="pushBackDetailsHint pushBackDetailsError"></textarea>
-                            <p class="form-hint" id="pushBackDetailsHint" style="margin:4px 0 0;font-size:11px;color:var(--text2);">Max 500 caratteri — clausole e condizioni sul retro del pass (non sulla strip né nella notifica).</p>
+                            <p class="form-hint" id="pushBackDetailsHint" style="margin:4px 0 0;font-size:11px;color:var(--text2);">Max 500 caratteri — compare sotto il Link 1, con qualsiasi delle due strade (non sulla strip né nella notifica).</p>
                             <p class="push-field-error" id="pushBackDetailsError" role="alert"></p>
                         </div>
                         <div class="form-group" style="margin-top:8px;display:none;" id="pushLegacyLinkOut">
@@ -1818,14 +1828,6 @@
                                 <input type="text" id="pushBackLinkLabel" placeholder="Testo link es. Scopri l'offerta" style="flex:1;">
                                 <input type="url" id="pushBackLinkUrl" placeholder="https://..." style="flex:1;">
                             </div>
-                        </div>
-                        <div class="form-group" style="margin-top:8px;">
-                            <label class="form-label" for="pushLinkedContent">Collega contenuto (opzionale)</label>
-                            <select id="pushLinkedContent" aria-label="Collega contenuto">
-                                <option value="">— Nessuno —</option>
-                            </select>
-                            <p style="font-size:11px;color:var(--text2);margin-top:4px;">Reward, Challenge o Convenzione: il suo link occupa il <strong>Link 1</strong> del retro e <strong>sostituisce</strong> il link manuale (o uno o l'altro).</p>
-                            <p style="font-size:11px;color:var(--orange);margin-top:2px;display:none;" id="pushLinkedContentActiveHint">Contenuto collegato attivo: i campi «Link sul retro» sono disattivati.</p>
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="pushAudienceTarget">Audience (opzionale)</label>
@@ -8126,9 +8128,10 @@ function syncLinkedContentExclusivity(prefix) {
     const sel = document.getElementById(prefix === 'sched' ? 'schedLinkedContent' : 'pushLinkedContent');
     if (!sel) return;
     const active = !!sel.value;
+    // La scadenza resta attiva: vale anche per il contenuto collegato.
     const ids = prefix === 'sched'
-        ? ['schedPassLinkUrl', 'schedPassLinkLabel', 'schedPassLinkExpires']
-        : ['pushPassLinkUrl', 'pushPassLinkLabel', 'pushPassLinkExpires'];
+        ? ['schedPassLinkUrl', 'schedPassLinkLabel']
+        : ['pushPassLinkUrl', 'pushPassLinkLabel'];
     ids.forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -8137,8 +8140,7 @@ function syncLinkedContentExclusivity(prefix) {
     });
     const hint = document.getElementById(prefix === 'sched' ? 'schedLinkedContentActiveHint' : 'pushLinkedContentActiveHint');
     if (hint) hint.style.display = active ? 'block' : 'none';
-    const fieldsWrap = document.getElementById(prefix === 'sched' ? 'schedPassLinkFields' : null);
-    if (fieldsWrap) fieldsWrap.style.opacity = active ? '0.5' : '';
+
 }
 document.addEventListener('change', (ev) => {
     if (ev.target?.id === 'pushLinkedContent') syncLinkedContentExclusivity('push');
@@ -8517,13 +8519,13 @@ function buildImmediatePushBody() {
     const gamId = document.getElementById('pushGamification')?.value;
     if (gamId) body.gamification_id = gamId;
     const linkedValue = document.getElementById('pushLinkedContent')?.value || '';
+    const expLocal = document.getElementById('pushPassLinkExpires')?.value;
+    if (expLocal) body.pass_link_expires_at = new Date(expLocal).toISOString();
     const passLinkUrl = linkedValue ? '' : (document.getElementById('pushPassLinkUrl')?.value || '').trim();
     if (passLinkUrl) {
         body.include_pass_link = true;
         body.pass_link_url = passLinkUrl;
         body.pass_link_label = (document.getElementById('pushPassLinkLabel')?.value || '').trim();
-        const expLocal = document.getElementById('pushPassLinkExpires')?.value;
-        if (expLocal) body.pass_link_expires_at = new Date(expLocal).toISOString();
     }
     const backDetails = (document.getElementById('pushBackDetails')?.value || '').trim();
     if (backDetails) body.back_details = backDetails;
@@ -8650,13 +8652,13 @@ async function createScheduledPush() {
     if (backDetails) body.back_details = backDetails;
     const schedLinkedValue = document.getElementById('schedLinkedContent')?.value || '';
     applyPushLinkedContentToBody(body, schedLinkedValue);
+    const schedExpLocal = document.getElementById('schedPassLinkExpires')?.value;
+    if (schedExpLocal) body.pass_link_expires_at = new Date(schedExpLocal).toISOString();
     const passLinkUrl = schedLinkedValue ? '' : (document.getElementById('schedPassLinkUrl')?.value || '').trim();
     if (passLinkUrl) {
         body.include_pass_link = true;
         body.pass_link_url = passLinkUrl;
         body.pass_link_label = (document.getElementById('schedPassLinkLabel')?.value || '').trim();
-        const expLocal = document.getElementById('schedPassLinkExpires')?.value;
-        if (expLocal) body.pass_link_expires_at = new Date(expLocal).toISOString();
     }
     if (updatePass && schedStripMediaId) body.strip_media_id = schedStripMediaId;
     const res = await fetch(`${API}/push/scheduled`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });

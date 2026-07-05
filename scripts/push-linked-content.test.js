@@ -82,3 +82,16 @@ test('gamification jigsaw (puzzle foto): link /game/jigsaw/:serial', () => {
     { publicBaseUrl: 'https://studio.test' });
   assert.equal(link.url, 'https://studio.test/game/jigsaw/SN-GAME-1');
 });
+
+test('scadenza contenuto collegato: gioco scaduto sparisce, futuro resta', () => {
+  const past = new Date(Date.now() - 60000).toISOString();
+  const future = new Date(Date.now() + 86400000).toISOString();
+  const expired = resolveVariableLink(INSTANCE, TEMPLATE,
+    { instantWinActive: { label: 'Gioca!', game_type: 'wheel', expires_at: past } },
+    { publicBaseUrl: 'https://studio.test' });
+  assert.equal(expired, null, 'gioco scaduto: nessun link');
+  const active = resolveVariableLink(INSTANCE, TEMPLATE,
+    { gamificationActive: { label: 'Puzzle!', game_type: 'jigsaw', expires_at: future } },
+    { publicBaseUrl: 'https://studio.test' });
+  assert.ok(active.url.includes('/game/jigsaw/'), 'scadenza futura: link presente');
+});

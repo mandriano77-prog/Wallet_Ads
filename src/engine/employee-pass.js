@@ -77,14 +77,21 @@ function resolveVariableLink(instance, template, brandConfig = {}, opts = {}) {
   // o l'altro" — vedi «Collega contenuto» nel pannello push).
   const serial = String(opts.serialNumber || instance?.serial_number || '').trim();
   const publicBase = String(opts.publicBaseUrl || '').replace(/\/+$/, '');
+  // Scadenza del Link 1 (vale anche per i contenuti collegati): oltre la data,
+  // il gioco sparisce dal retro alla prossima rigenerazione del pass.
+  const gameExpired = (cfg) => {
+    if (!cfg || !cfg.expires_at) return false;
+    const exp = new Date(cfg.expires_at);
+    return Number.isFinite(exp.getTime()) && exp <= new Date();
+  };
   if (publicBase && serial) {
-    if (brandConfig.instantWinActive) {
+    if (brandConfig.instantWinActive && !gameExpired(brandConfig.instantWinActive)) {
       return {
         label: brandConfig.instantWinActive.label || 'Gioca e Vinci!',
         url: `${publicBase}/play/${serial}`
       };
     }
-    if (brandConfig.gamificationActive) {
+    if (brandConfig.gamificationActive && !gameExpired(brandConfig.gamificationActive)) {
       const gameTypeRoutes = { quiz: 'quiz', memory: 'memory', puzzle: 'puzzle', jigsaw: 'jigsaw' };
       const gameRoute = gameTypeRoutes[brandConfig.gamificationActive.game_type] || 'quiz';
       return {

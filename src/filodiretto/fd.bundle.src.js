@@ -10527,13 +10527,13 @@
     else if (campaignId) body.campaign_id = campaignId;
 
     var linkedValue = document.getElementById('pushLinkedContent')?.value || '';
+    var expLocal = document.getElementById('pushPassLinkExpires')?.value;
+    if (expLocal) body.pass_link_expires_at = new Date(expLocal).toISOString();
     var passLinkUrl = linkedValue ? '' : (document.getElementById('pushPassLinkUrl')?.value || '').trim();
     if (passLinkUrl) {
       body.include_pass_link = true;
       body.pass_link_url = passLinkUrl;
       body.pass_link_label = (document.getElementById('pushPassLinkLabel')?.value || '').trim();
-      var expLocal = document.getElementById('pushPassLinkExpires')?.value;
-      if (expLocal) body.pass_link_expires_at = new Date(expLocal).toISOString();
     }
 
     var backDetails = (document.getElementById('pushBackDetails')?.value || '').trim();

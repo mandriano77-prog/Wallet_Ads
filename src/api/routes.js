@@ -2639,7 +2639,7 @@ router.post('/push/scheduled', async (req, res) => {
       body.include_pass_link = false;
       body.pass_link_url = null;
       body.pass_link_label = null;
-      body.pass_link_expires_at = null;
+      // pass_link_expires_at resta: e' la scadenza del contenuto collegato.
     } else if (body.pass_link_url) {
       parsePassLinkFromPushBody(body, body.title);
       body.include_pass_link = true;
