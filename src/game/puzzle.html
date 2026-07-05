@@ -247,6 +247,9 @@ function renderPuzzle() {
   const gridClass = gridSize === 4 ? 'grid-4x4' : 'grid-3x3';
   const app = document.getElementById('app');
   app.innerHTML = `
+    <p style="text-align:center;font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.5;">
+      Riordina i numeri da <strong>1 a 8</strong>: tocca una tessera accanto allo spazio vuoto per farla scorrere. Più sei veloce, più vinci!
+    </p>
     <div class="game-stats">
       <div class="timer-text" id="timerDisplay">0.0s</div>
       <div class="moves-text" id="movesDisplay">${moves} mosse</div>
