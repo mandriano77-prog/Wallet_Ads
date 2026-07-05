@@ -2659,14 +2659,20 @@
                     <div class="form-group" id="gamPuzzleImageBlock" style="display:none;">
                       <label class="form-label">Immagine del puzzle</label>
                       <select id="gamPuzzleImage" onchange="syncGamPuzzleImagePreview()">
-                        <option value="">Strip della campagna (o placeholder)</option>
+                        <option value="">🎲 Foto famosa a caso dalla galleria (consigliato)</option>
                         <option value="/game-images/torre-eiffel.jpg">Torre Eiffel</option>
                         <option value="/game-images/colosseo.jpg">Colosseo</option>
+                        <option value="/game-images/fontana-di-trevi.jpg">Fontana di Trevi</option>
                         <option value="/game-images/torre-di-pisa.jpg">Torre di Pisa</option>
                         <option value="/game-images/duomo-milano.jpg">Duomo di Milano</option>
+                        <option value="/game-images/venezia.jpg">Venezia — Canal Grande</option>
                         <option value="/game-images/statua-liberta.jpg">Statua della Libertà</option>
                         <option value="/game-images/golden-gate.jpg">Golden Gate</option>
                         <option value="/game-images/big-ben.jpg">Big Ben</option>
+                        <option value="/game-images/machu-picchu.jpg">Machu Picchu</option>
+                        <option value="/game-images/taj-mahal.jpg">Taj Mahal</option>
+                        <option value="/game-images/piramidi.jpg">Piramidi di Giza</option>
+                        <option value="strip">Strip della campagna (immagine tua)</option>
                       </select>
                       <img id="gamPuzzleImagePreview" alt="" style="display:none;margin-top:8px;width:100%;max-width:260px;border-radius:8px;border:1px solid var(--border);">
                       <p style="font-size:11px;color:var(--text2);margin-top:4px;">Un'immagine famosa rende il puzzle molto più intuitivo per chi gioca.</p>
@@ -12147,7 +12153,7 @@ function syncGamPuzzleImagePreview() {
     const val = document.getElementById('gamPuzzleImage')?.value || '';
     const img = document.getElementById('gamPuzzleImagePreview');
     if (!img) return;
-    if (val) { img.src = val; img.style.display = 'block'; }
+    if (val && val !== 'strip') { img.src = val; img.style.display = 'block'; }
     else { img.style.display = 'none'; img.removeAttribute('src'); }
 }
 

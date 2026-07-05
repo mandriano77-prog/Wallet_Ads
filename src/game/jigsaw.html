@@ -204,25 +204,22 @@ function renderStart() {
   `;
 }
 
+// Galleria di foto celebri (public/game-images) — il default del puzzle.
+const PUZZLE_GALLERY = ["/game-images/torre-eiffel.jpg", "/game-images/colosseo.jpg", "/game-images/torre-di-pisa.jpg", "/game-images/duomo-milano.jpg", "/game-images/statua-liberta.jpg", "/game-images/golden-gate.jpg", "/game-images/big-ben.jpg", "/game-images/machu-picchu.jpg", "/game-images/taj-mahal.jpg", "/game-images/piramidi.jpg", "/game-images/venezia.jpg", "/game-images/fontana-di-trevi.jpg"];
+
 function resolvePuzzleImage() {
-  const raw = (campaign.config && campaign.config.puzzle_image) || campaign.strip_base64 || null;
-  if (raw) {
-    const v = String(raw);
-    // Galleria (path /game-images/...), URL assoluto o data URL: usa così com'è.
+  const chosen = (campaign.config && campaign.config.puzzle_image) || null;
+  if (chosen === 'strip' && campaign.strip_base64) {
+    const v = String(campaign.strip_base64);
+    return v.startsWith('data:') ? v : 'data:image/png;base64,' + v;
+  }
+  if (chosen && chosen !== 'strip') {
+    const v = String(chosen);
     if (v.startsWith('data:') || v.startsWith('/') || v.startsWith('http')) return v;
     return 'data:image/png;base64,' + v;
   }
-  const c = document.createElement('canvas');
-  c.width = 900; c.height = 600;
-  const ctx = c.getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 900, 600);
-  grad.addColorStop(0, '#7c3aed'); grad.addColorStop(1, '#3CDFFF');
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, 900, 600);
-  ctx.fillStyle = 'rgba(255,255,255,.92)';
-  ctx.font = '700 84px -apple-system, sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(gameInfo.brand.name || 'Puzzle', 450, 300);
-  return c.toDataURL('image/png');
+  // Default: una foto famosa a caso — sempre riconoscibile, sempre giocabile.
+  return PUZZLE_GALLERY[Math.floor(Math.random() * PUZZLE_GALLERY.length)];
 }
 
 function startGame() {
