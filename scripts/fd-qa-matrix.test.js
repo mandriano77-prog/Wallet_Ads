@@ -157,8 +157,8 @@ test('fd.bundle.css preserves calc() operator spacing (W.AI inset)', () => {
 
 test('index.html bundle cache references wide-layout tag', () => {
   const html = read('src/dashboard/index.html');
-  assert.match(html, /fd\.bundle\.css\?v=20260704-linkedcontent/);
-  assert.match(html, /fd\.bundle\.js\?v=20260704-linkedcontent/);
+  assert.match(html, /fd\.bundle\.css\?v=20260705-histmenu/);
+  assert.match(html, /fd\.bundle\.js\?v=20260705-histmenu/);
   assert.match(html, /\/dashboard\/lib\/public-url\.js/);
   assert.match(html, /function a2wPublicUrlBase/);
   assert.match(html, /#a2wMediaTabs\{display:none!important\}/);
@@ -957,4 +957,11 @@ test('Google Wallet sync reloads passes after push strip overlay update', () => 
   const dispatch = read('src/engine/push-dispatch.js');
   assert.match(dispatch, /await updatePassPushOverlays\(targetPasses\.map\(\(p\) => p\.id\),/);
   assert.match(dispatch, /await touchPassesByIds\(targetPasses\.map\(\(p\) => p\.id\)\);[\s\S]{0,180}targetPasses = await getTargetPassesForPush\(brand_id, pushTargetOpts\);/);
+});
+
+test('Push history menu: la chiusura copre i pannelli spostati su body (fix menu incollati)', () => {
+  const fdPush = fs.readFileSync(path.join(ROOT, 'src/filodiretto/fd-push.js'), 'utf-8');
+  assert.match(fdPush, /body > \.fd-push-history-menu__panel/, 'selettore chiusura include i pannelli su body');
+  assert.match(fdPush, /panel\.classList\.add\('fd-push-history-menu__panel'\)/, 'pannello marcato quando va su body');
+  assert.match(fdPush, /p\.parentNode === document\.body[\s\S]{0,40}p\.remove\(\)/, 'pannelli orfani rimossi');
 });

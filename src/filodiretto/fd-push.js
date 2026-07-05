@@ -1941,10 +1941,18 @@
   }
 
   function closeAllPushHistoryMenus() {
-    document.querySelectorAll('#pushHistory .fd-pass-row-menu__panel').forEach(function (p) {
+    // I pannelli aperti vivono su <body> (spostati da openPushHistoryMenu):
+    // il selettore deve coprirli, o restano appesi e intercettano i click.
+    document.querySelectorAll('#pushHistory .fd-pass-row-menu__panel, body > .fd-push-history-menu__panel').forEach(function (p) {
       p.hidden = true;
       resetPushHistoryMenuPanel(p);
-      restorePushHistoryMenuPanel(p);
+      // Se lo storico è stato rirenderizzato, la "casa" del pannello non esiste
+      // più: il nodo orfano va rimosso, non riparcheggiato.
+      if (p._fdMenuHome && document.contains(p._fdMenuHome)) {
+        restorePushHistoryMenuPanel(p);
+      } else if (p.parentNode === document.body) {
+        p.remove();
+      }
     });
     document.querySelectorAll('#pushHistory .fd-pass-row-menu__trigger').forEach(function (t) {
       t.setAttribute('aria-expanded', 'false');
@@ -1957,6 +1965,7 @@
     if (!menu) return;
     panel._fdMenuHome = menu;
     panel._fdMenuTrigger = trigger;
+    panel.classList.add('fd-push-history-menu__panel');
     document.body.appendChild(panel);
     panel.hidden = false;
     trigger.setAttribute('aria-expanded', 'true');
