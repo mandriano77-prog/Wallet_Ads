@@ -206,7 +206,12 @@ function renderStart() {
 
 function resolvePuzzleImage() {
   const raw = (campaign.config && campaign.config.puzzle_image) || campaign.strip_base64 || null;
-  if (raw) return String(raw).startsWith('data:') ? raw : 'data:image/png;base64,' + raw;
+  if (raw) {
+    const v = String(raw);
+    // Galleria (path /game-images/...), URL assoluto o data URL: usa così com'è.
+    if (v.startsWith('data:') || v.startsWith('/') || v.startsWith('http')) return v;
+    return 'data:image/png;base64,' + v;
+  }
   const c = document.createElement('canvas');
   c.width = 900; c.height = 600;
   const ctx = c.getContext('2d');
