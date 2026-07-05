@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Puzzle Foto</title>
+<style>
+:root {
+  --bg: #0a0a0a; --card: #141414; --border: #222;
+  --teal: #3CDFFF; --purple: #A78BFA; --gold: #FFD700;
+  --green: #22c55e; --red: #ef4444; --text: #f0f0f0; --muted: #888;
+  --silver: #C0C0C0; --bronze: #CD7F32;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; -webkit-user-select: none; user-select: none; }
+.container { width: 100%; max-width: 420px; padding: 20px; text-align: center; }
+.brand-name { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-top: 20px; }
+.game-title { font-size: 28px; font-weight: 800; margin: 8px 0 4px; }
+.prize-label { font-size: 16px; color: var(--purple); margin-bottom: 16px; }
+
+/* Timer */
+.game-stats { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px; }
+.timer-text { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--teal); }
+.moves-text { font-size: 14px; color: var(--muted); }
+
+/* Puzzle grid */
+.puzzle-wrapper { position: relative; width: 100%; max-width: 360px; margin: 0 auto 24px; }
+.puzzle-grid { display: grid; gap: 3px; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--border); }
+.grid-3x3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4x4 { grid-template-columns: repeat(4, 1fr); }
+
+.puzzle-tile { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; cursor: pointer; transition: transform 0.15s ease, background 0.2s; border-radius: 4px; position: relative; }
+.puzzle-tile:active { transform: scale(0.95); }
+.puzzle-tile.empty { background: transparent !important; cursor: default; }
+.puzzle-tile.correct { box-shadow: inset 0 0 0 2px var(--green); }
+
+/* Preview image */
+.preview-container { margin: 16px auto; width: 120px; height: 120px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+.preview-container img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Result */
+.result-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 100; }
+.result-overlay.show { display: flex; }
+.result-card { background: var(--card); border-radius: 24px; padding: 40px 32px; text-align: center; max-width: 360px; width: 90%; border: 2px solid var(--border); animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.result-icon { font-size: 64px; margin-bottom: 16px; }
+.result-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+.result-desc { font-size: 16px; color: var(--muted); margin-bottom: 8px; }
+.result-time { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+.result-prize { font-size: 20px; color: var(--gold); font-weight: 700; margin-bottom: 24px; }
+.tier-badge { display: inline-block; padding: 6px 20px; border-radius: 50px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+.tier-gold { background: rgba(255,215,0,0.15); color: var(--gold); border: 1px solid var(--gold); }
+.tier-silver { background: rgba(192,192,192,0.15); color: var(--silver); border: 1px solid var(--silver); }
+.tier-bronze { background: rgba(205,127,50,0.15); color: var(--bronze); border: 1px solid var(--bronze); }
+.tier-none { background: rgba(136,136,136,0.15); color: var(--muted); border: 1px solid var(--muted); }
+.btn-close-result { background: var(--teal); color: #000; border: none; padding: 12px 32px; font-size: 16px; font-weight: 600; border-radius: 50px; cursor: pointer; }
+
+/* Loading & Form */
+.loading { text-align: center; padding: 60px 20px; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-msg { background: rgba(239,68,68,0.1); border: 1px solid var(--red); padding: 20px; border-radius: 12px; margin: 20px 0; }
+.form-step { animation: fadeIn 0.4s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.form-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 32px 24px; margin: 16px 0; text-align: left; }
+.form-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; text-align: center; }
+.form-card .subtitle { font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 24px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+.form-group input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 16px; -webkit-appearance: none; }
+.form-group input:focus { outline: none; border-color: var(--teal); }
+.form-group .required { color: var(--red); }
+.form-error { color: var(--red); font-size: 13px; margin-top: 4px; display: none; }
+.submit-btn { width: 100%; background: linear-gradient(135deg, var(--teal), var(--purple)); color: #fff; border: none; padding: 16px; font-size: 17px; font-weight: 700; border-radius: 50px; cursor: pointer; margin-top: 20px; }
+.play-btn { background: linear-gradient(135deg, var(--teal), var(--purple)); color: #fff; border: none; padding: 16px 48px; font-size: 18px; font-weight: 700; border-radius: 50px; cursor: pointer; transition: transform 0.2s; }
+.play-btn:hover { transform: scale(1.05); }
+.confetti { position: fixed; width: 10px; height: 10px; top: -10px; animation: confettiFall 3s ease-out forwards; z-index: 200; pointer-events: none; }
+@keyframes confettiFall { to { top: 110vh; transform: rotate(720deg) translateX(50px); } }
+.powered-by { font-size: 11px; color: #444; margin-top: 40px; }
+.powered-by a { color: #555; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <div class="loading"><div class="spinner"></div><div>Caricamento puzzle...</div></div>
+</div>
+
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-card">
+    <div class="result-icon" id="resultIcon"></div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-desc" id="resultDesc"></div>
+    <div class="tier-badge" id="tierBadge"></div>
+    <div class="result-time" id="resultTime"></div>
+    <div class="result-prize" id="resultPrize"></div>
+    <button class="btn-close-result" onclick="location.reload()">Gioca ancora</button>
+  </div>
+</div>
+
+<script>
+const serial = window.location.pathname.split('/').pop();
+const API = '/api/v1';
+let gameInfo = null;
+let campaign = null;
+let playerData = {};
+
+// Jigsaw: pezzi immagine da piazzare nella griglia (tocca pezzo -> tocca casella)
+let gridSize = 3;
+let boardSlots = [];
+let trayPieces = [];
+let selectedPiece = null;
+let moves = 0;
+let startTime = null;
+let timerInterval = null;
+let imgUrl = null;
+let imgW = 3, imgH = 2;
+
+function resolvePuzzleImage() {
+  const raw = (campaign.config && campaign.config.puzzle_image) || campaign.strip_base64 || null;
+  if (raw) return String(raw).startsWith('data:') ? raw : 'data:image/png;base64,' + raw;
+  const c = document.createElement('canvas');
+  c.width = 900; c.height = 600;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 900, 600);
+  grad.addColorStop(0, '#7c3aed'); grad.addColorStop(1, '#3CDFFF');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, 900, 600);
+  ctx.fillStyle = 'rgba(255,255,255,.92)';
+  ctx.font = '700 84px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(gameInfo.brand.name || 'Puzzle', 450, 300);
+  return c.toDataURL('image/png');
+}
+
+function startGame() {
+  gridSize = (campaign.config && campaign.config.grid_size) || 3;
+  imgUrl = resolvePuzzleImage();
+  const probe = new Image();
+  probe.onload = function () {
+    imgW = probe.naturalWidth || 3;
+    imgH = probe.naturalHeight || 2;
+    const total = gridSize * gridSize;
+    boardSlots = new Array(total).fill(null);
+    trayPieces = [];
+    for (let i = 0; i < total; i++) trayPieces.push(i);
+    for (let i = trayPieces.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = trayPieces[i]; trayPieces[i] = trayPieces[j]; trayPieces[j] = t;
+    }
+    selectedPiece = null;
+    moves = 0;
+    startTime = Date.now();
+    timerInterval = setInterval(() => {
+      const el = document.getElementById('timerDisplay');
+      if (el) el.textContent = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+    }, 100);
+    renderJigsaw();
+  };
+  probe.src = imgUrl;
+}
+
+function cellDims() {
+  const boardW = Math.min(window.innerWidth - 40, 360);
+  const cellW = Math.floor(boardW / gridSize);
+  const cellH = Math.max(40, Math.floor(cellW * (imgH / imgW)));
+  return { cellW, cellH };
+}
+
+function pieceCss(pieceIdx, w, h) {
+  const r = Math.floor(pieceIdx / gridSize);
+  const c = pieceIdx % gridSize;
+  return 'background-image:url(' + imgUrl + ');background-size:' + (w * gridSize) + 'px ' + (h * gridSize) + 'px;background-position:-' + (c * w) + 'px -' + (r * h) + 'px;';
+}
+
+function renderJigsaw() {
+  const d = cellDims();
+  const tw = Math.floor(d.cellW * 0.7);
+  const th = Math.floor(d.cellH * 0.7);
+  const app = document.getElementById('app');
+  const sel = selectedPiece;
+  let board = '';
+  boardSlots.forEach((piece, slot) => {
+    const selected = sel && sel.from === 'board' && sel.slot === slot;
+    if (piece == null) {
+      board += '<div onclick="tapSlot(' + slot + ')" style="width:' + d.cellW + 'px;height:' + d.cellH + 'px;border:1.5px dashed rgba(255,255,255,.25);border-radius:4px;background:rgba(255,255,255,.04);cursor:pointer;"></div>';
+    } else {
+      const ok = piece === slot;
+      board += '<div onclick="tapSlot(' + slot + ')" style="width:' + d.cellW + 'px;height:' + d.cellH + 'px;border-radius:4px;cursor:pointer;' + pieceCss(piece, d.cellW, d.cellH) + (ok ? 'box-shadow:inset 0 0 0 2px var(--green);' : '') + (selected ? 'outline:3px solid var(--teal);outline-offset:-3px;' : '') + '"></div>';
+    }
+  });
+  let tray = '';
+  if (trayPieces.length) {
+    trayPieces.forEach((piece) => {
+      const selected = sel && sel.from === 'tray' && sel.piece === piece;
+      tray += '<div onclick="tapTray(' + piece + ')" style="width:' + tw + 'px;height:' + th + 'px;border-radius:4px;cursor:pointer;' + pieceCss(piece, tw, th) + (selected ? 'outline:3px solid var(--teal);outline-offset:-3px;' : '') + '"></div>';
+    });
+  } else {
+    tray = '<div style="font-size:12px;color:var(--muted);align-self:center;">Tutti i pezzi sono sulla griglia</div>';
+  }
+  app.innerHTML =
+    '<p style="text-align:center;font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.5;">Tocca un pezzo in basso, poi la casella dove va: ricomponi la foto!</p>' +
+    '<div class="game-stats"><div class="timer-text" id="timerDisplay">0.0s</div><div class="moves-text" id="movesDisplay">' + moves + ' mosse</div></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(' + gridSize + ',' + d.cellW + 'px);justify-content:center;gap:2px;margin:0 auto 14px;">' + board + '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:' + (d.cellW * gridSize + 40) + 'px;margin:0 auto;padding:10px;border-radius:12px;background:rgba(255,255,255,.05);min-height:' + (th + 20) + 'px;">' + tray + '</div>' +
+    '<div class="powered-by">Powered by <a href="/" target="_blank">FiloDiretto</a></div>';
+}
+
+function afterMove() {
+  selectedPiece = null;
+  moves++;
+  renderJigsaw();
+  if (isSolved()) {
+    clearInterval(timerInterval);
+    setTimeout(() => finishGame(), 300);
+  }
+}
+
+function tapTray(piece) {
+  selectedPiece = (selectedPiece && selectedPiece.from === 'tray' && selectedPiece.piece === piece)
+    ? null
+    : { from: 'tray', piece: piece };
+  renderJigsaw();
+}
+
+function tapSlot(slot) {
+  const current = boardSlots[slot];
+  if (!selectedPiece) {
+    if (current != null) {
+      selectedPiece = { from: 'board', slot: slot };
+      renderJigsaw();
+    }
+    return;
+  }
+  if (selectedPiece.from === 'tray') {
+    trayPieces = trayPieces.filter((p) => p !== selectedPiece.piece);
+    if (current != null) trayPieces.push(current);
+    boardSlots[slot] = selectedPiece.piece;
+    afterMove();
+    return;
+  }
+  // from board: sposta o scambia
+  const fromSlot = selectedPiece.slot;
+  if (fromSlot === slot) { selectedPiece = null; renderJigsaw(); return; }
+  const moving = boardSlots[fromSlot];
+  boardSlots[fromSlot] = current;
+  boardSlots[slot] = moving;
+  afterMove();
+}
+
+function isSolved() {
+  return boardSlots.length > 0 && boardSlots.every((piece, slot) => piece === slot);
+}
+
+async function finishGame() {
+  const totalTime = (Date.now() - startTime) / 1000;
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading"><div class="spinner"></div><div>Calcolo risultati...</div></div>`;
+
+  try {
+    const res = await fetch(`${API}/game/${serial}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        campaign_id: campaign.id,
+        completion_time_secs: totalTime.toFixed(2),
+        score: moves,
+        ...playerData
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore');
+    showResult(data, totalTime);
+  } catch (err) {
+    app.innerHTML = `<div class="error-msg">${err.message}</div>`;
+  }
+}
+
+function showResult(data, totalTime) {
+  const overlay = document.getElementById('resultOverlay');
+  const icons = { gold: '🏆', silver: '🥈', bronze: '🥉', none: '😔' };
+  const titles = { gold: 'Oro!', silver: 'Argento!', bronze: 'Bronzo!', none: 'Tempo scaduto' };
+  const tierClasses = { gold: 'tier-gold', silver: 'tier-silver', bronze: 'tier-bronze', none: 'tier-none' };
+
+  document.getElementById('resultIcon').textContent = icons[data.tier];
+  document.getElementById('resultTitle').textContent = titles[data.tier];
+  document.getElementById('resultDesc').textContent = `Completato in ${moves} mosse`;
+  document.getElementById('tierBadge').textContent = data.tier.toUpperCase();
+  document.getElementById('tierBadge').className = `tier-badge ${tierClasses[data.tier]}`;
+  document.getElementById('resultTime').textContent = `Tempo: ${totalTime.toFixed(1)} secondi`;
+
+  if (data.prize_name) {
+    document.getElementById('resultPrize').textContent = `Hai vinto: ${data.prize_name}`;
+    document.getElementById('resultPrize').style.display = 'block';
+    launchConfetti();
+  } else {
+    document.getElementById('resultPrize').style.display = 'none';
+  }
+  overlay.classList.add('show');
+}
+
+function launchConfetti() {
+  const colors = ['#3CDFFF', '#A78BFA', '#FFD700', '#22c55e', '#ef4444', '#FF6B6B'];
+  for (let i = 0; i < 40; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDelay = Math.random() * 1.5 + 's';
+    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    el.style.width = (6 + Math.random() * 8) + 'px';
+    el.style.height = (6 + Math.random() * 8) + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

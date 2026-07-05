@@ -2646,7 +2646,7 @@
                     <input type="hidden" id="gamEditId">
                     <div class="form-group"><label class="form-label">Nome campagna</label><input id="gamName" placeholder="es. Quiz Natale 2026"></div>
                     <div class="form-group"><label class="form-label">Tipo gioco</label>
-                      <select id="gamGameType"><option value="quiz">Quiz</option><option value="memory">Memory Match</option><option value="puzzle">Puzzle</option></select>
+                      <select id="gamGameType"><option value="quiz">Quiz</option><option value="memory">Memory Match</option><option value="puzzle">Puzzle numeri (gioco del 15)</option><option value="jigsaw">Puzzle foto</option></select>
                     </div>
 
                     <div class="fd-challenge-prize-tiers">
@@ -8055,7 +8055,7 @@ async function loadPushLinkedContentSelect() {
         const conventionOg = document.createElement('optgroup');
         conventionOg.label = 'Convenzioni';
         const iwLabels = { scratch: 'Scratch', wheel: 'Ruota', slots: 'Slot' };
-        const gamLabels = { quiz: 'Quiz', memory: 'Memory', puzzle: 'Puzzle' };
+        const gamLabels = { quiz: 'Quiz', memory: 'Memory', puzzle: 'Puzzle numeri', jigsaw: 'Puzzle foto' };
         if (iwRes.ok) {
             const campaigns = await iwRes.json();
             campaigns.filter(c => c.status === 'active').forEach(c => {

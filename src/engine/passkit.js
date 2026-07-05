@@ -508,7 +508,7 @@ function generatePassJson(template, instance, brand, options = {}) {
       return makeBackLinkField('link_0', iwLabel, playUrl);
     }
     if (brandCfg.gamificationActive && serialNumber) {
-      const gameTypeRoutes = { quiz: 'quiz', memory: 'memory', puzzle: 'puzzle' };
+      const gameTypeRoutes = { quiz: 'quiz', memory: 'memory', puzzle: 'puzzle', jigsaw: 'jigsaw' };
       const gameRoute = gameTypeRoutes[brandCfg.gamificationActive.game_type] || 'quiz';
       const gameUrl = `${baseUrl}/game/${gameRoute}/${serialNumber}`;
       const gamLabel = brandCfg.gamificationActive.label || 'Gioca ora!';

@@ -454,6 +454,9 @@ app.get('/game/memory/:serial_number', (req, res) => {
 app.get('/game/puzzle/:serial_number', (req, res) => {
   res.sendFile(path.join(__dirname, 'game', 'puzzle.html'));
 });
+app.get('/game/jigsaw/:serial_number', (req, res) => {
+  res.sendFile(path.join(__dirname, 'game', 'jigsaw.html'));
+});
 
 // ─── Direct Save — skip landing, serve .pkpass immediately ──────────────
 // URL: /save/{slug}/{campaignId}?utm_source=instagram&utm_medium=story&...

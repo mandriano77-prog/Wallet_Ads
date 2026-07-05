@@ -402,7 +402,7 @@ CREATE TABLE IF NOT EXISTS gamification_campaigns (
   id TEXT PRIMARY KEY,
   brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  game_type TEXT NOT NULL CHECK (game_type IN ('quiz', 'memory', 'puzzle')),
+  game_type TEXT NOT NULL CHECK (game_type IN ('quiz', 'memory', 'puzzle', 'jigsaw')),
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'paused', 'ended')),
   gold_threshold_secs NUMERIC NOT NULL DEFAULT 15,
   silver_threshold_secs NUMERIC NOT NULL DEFAULT 30,
@@ -571,6 +571,9 @@ async function getDb() {
     await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS update_pass BOOLEAN DEFAULT true`).catch(logSchemaError);
     await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS instant_win_id TEXT`).catch(logSchemaError);
     await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS gamification_id TEXT`).catch(logSchemaError);
+    // Nuovo gioco challenge 'jigsaw' (puzzle foto): allarga il CHECK esistente.
+    await pool.query(`ALTER TABLE gamification_campaigns DROP CONSTRAINT IF EXISTS gamification_campaigns_game_type_check`).catch(logSchemaError);
+    await pool.query(`ALTER TABLE gamification_campaigns ADD CONSTRAINT gamification_campaigns_game_type_check CHECK (game_type IN ('quiz', 'memory', 'puzzle', 'jigsaw'))`).catch(logSchemaError);
     await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'apple'`).catch(logSchemaError);
     await pool.query(`ALTER TABLE scheduled_push ADD COLUMN IF NOT EXISTS audience_id TEXT`).catch(logSchemaError);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_audiences_brand ON audiences(brand_id)`).catch(logSchemaError);

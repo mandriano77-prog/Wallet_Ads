@@ -75,3 +75,10 @@ test('resolveVariableLink: flag null (azzerato) non attiva il gioco', () => {
     { publicBaseUrl: 'https://studio.test' });
   assert.equal(link.url, 'https://studio.test/game/puzzle/SN-GAME-1', 'null saltato, puzzle attivo');
 });
+
+test('gamification jigsaw (puzzle foto): link /game/jigsaw/:serial', () => {
+  const link = resolveVariableLink(INSTANCE, TEMPLATE,
+    { gamificationActive: { campaign_id: 'g2', label: 'Ricomponi la foto!', game_type: 'jigsaw' } },
+    { publicBaseUrl: 'https://studio.test' });
+  assert.equal(link.url, 'https://studio.test/game/jigsaw/SN-GAME-1');
+});

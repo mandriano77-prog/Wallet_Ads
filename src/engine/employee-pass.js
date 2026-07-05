@@ -85,7 +85,7 @@ function resolveVariableLink(instance, template, brandConfig = {}, opts = {}) {
       };
     }
     if (brandConfig.gamificationActive) {
-      const gameTypeRoutes = { quiz: 'quiz', memory: 'memory', puzzle: 'puzzle' };
+      const gameTypeRoutes = { quiz: 'quiz', memory: 'memory', puzzle: 'puzzle', jigsaw: 'jigsaw' };
       const gameRoute = gameTypeRoutes[brandConfig.gamificationActive.game_type] || 'quiz';
       return {
         label: brandConfig.gamificationActive.label || 'Gioca ora!',

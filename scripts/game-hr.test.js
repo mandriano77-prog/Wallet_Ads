@@ -44,7 +44,7 @@ test('play page: vincita HR mostra i coin accreditati', () => {
 });
 
 test('pagine gioco: API base /api/v1 (il router non è montato su /api)', () => {
-  for (const page of ['quiz', 'memory', 'puzzle']) {
+  for (const page of ['quiz', 'memory', 'puzzle', 'jigsaw']) {
     const src = fs.readFileSync(path.join(__dirname, '..', `src/game/${page}.html`), 'utf-8');
     assert.match(src, /const API = '\/api\/v1';/, `${page}.html deve usare /api/v1`);
   }
