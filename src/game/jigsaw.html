@@ -115,6 +115,7 @@ let startTime = null;
 let timerInterval = null;
 let imgUrl = null;
 let imgW = 3, imgH = 2;
+let pieceClass = []; // classe visiva: pezzi indistinguibili (es. cielo) sono intercambiabili
 
 async function init() {
   try {
@@ -230,6 +231,7 @@ function startGame() {
     imgW = probe.naturalWidth || 3;
     imgH = probe.naturalHeight || 2;
     const total = gridSize * gridSize;
+    computePieceClasses(probe, total);
     boardSlots = new Array(total).fill(null);
     trayPieces = [];
     for (let i = 0; i < total; i++) trayPieces.push(i);
@@ -257,6 +259,50 @@ function startGame() {
   probe.src = imgUrl;
 }
 
+// Pezzi visivamente identici (cielo, mare, muri uniformi) = stessa classe:
+// piazzarne uno al posto dell'altro è corretto. Senza questo, sei pezzi di
+// cielo uguale rendono il puzzle irrisolvibile a occhio.
+function computePieceClasses(img, total) {
+  pieceClass = Array.from({ length: total }, (_, i) => i);
+  try {
+    const SW = 16, SH = 12;
+    const c = document.createElement('canvas');
+    c.width = SW * gridSize; c.height = SH * gridSize;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    const cells = [];
+    for (let i = 0; i < total; i++) {
+      const r = Math.floor(i / gridSize), col = i % gridSize;
+      cells.push(ctx.getImageData(col * SW, r * SH, SW, SH).data);
+    }
+    const meanDiff = (a, b) => {
+      let sum = 0;
+      for (let i = 0; i < a.length; i += 4) {
+        sum += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
+      }
+      return sum / (a.length / 4) / 3;
+    };
+    const assigned = new Array(total).fill(-1);
+    let next = 0;
+    for (let i = 0; i < total; i++) {
+      if (assigned[i] !== -1) continue;
+      assigned[i] = next;
+      for (let j = i + 1; j < total; j++) {
+        if (assigned[j] === -1 && meanDiff(cells[i], cells[j]) < 10) assigned[j] = next;
+      }
+      next++;
+    }
+    pieceClass = assigned;
+  } catch (e) {
+    // canvas non leggibile: ogni pezzo fa classe a sé (gioco esatto classico)
+  }
+}
+
+function pieceFits(piece, slot) {
+  if (piece === slot) return true;
+  return pieceClass.length > 0 && pieceClass[piece] === pieceClass[slot];
+}
+
 function cellDims() {
   const boardW = Math.min(window.innerWidth - 40, 360);
   const cellW = Math.floor(boardW / gridSize);
@@ -282,7 +328,7 @@ function renderJigsaw() {
     if (piece == null) {
       board += '<div onclick="tapSlot(' + slot + ')" style="width:' + d.cellW + 'px;height:' + d.cellH + 'px;border:1.5px dashed rgba(255,255,255,.25);border-radius:4px;background:rgba(255,255,255,.04);cursor:pointer;"></div>';
     } else {
-      const ok = piece === slot;
+      const ok = pieceFits(piece, slot);
       board += '<div onclick="tapSlot(' + slot + ')" style="width:' + d.cellW + 'px;height:' + d.cellH + 'px;border-radius:4px;cursor:pointer;' + pieceCss(piece, d.cellW, d.cellH) + (ok ? 'box-shadow:inset 0 0 0 2px var(--green);' : '') + (selected ? 'outline:3px solid var(--teal);outline-offset:-3px;' : '') + '"></div>';
     }
   });
@@ -345,7 +391,7 @@ function tapSlot(slot) {
 }
 
 function isSolved() {
-  return boardSlots.length > 0 && boardSlots.every((piece, slot) => piece === slot);
+  return boardSlots.length > 0 && boardSlots.every((piece, slot) => piece != null && pieceFits(piece, slot));
 }
 
 async function finishGame() {
