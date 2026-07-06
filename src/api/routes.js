@@ -1542,6 +1542,62 @@ router.delete('/users/:id', async (req, res) => {
 
 // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Brands ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
 
+// ── Manutenzione archivio: brand fuori linea di prodotto (residui era Ads) ──
+// La dashboard li nasconde e lo scheduler li salta; da qui l'admin li vede,
+// silenzia le loro programmate o li elimina definitivamente.
+router.get('/admin/foreign-brands', async (req, res) => {
+  try {
+    if (!isUserAdmin(req)) return res.status(403).json({ error: 'Solo admin piattaforma' });
+    const { brandAllowedOnDeploy, brandProductLine } = require('./deploy-lock');
+    const foreign = (await listBrands()).filter((b) => !brandAllowedOnDeploy(b));
+    const out = [];
+    for (const b of foreign) {
+      const [passes, members, schedules] = await Promise.all([
+        pool.query('SELECT COUNT(*)::int AS n FROM pass_instances WHERE brand_id = $1', [b.id]),
+        pool.query('SELECT COUNT(*)::int AS n FROM members WHERE brand_id = $1', [b.id]),
+        pool.query('SELECT COUNT(*)::int AS n FROM scheduled_push WHERE brand_id = $1 AND active = true', [b.id]),
+      ]);
+      out.push({
+        id: b.id, name: b.name, slug: b.slug,
+        product_line: brandProductLine(b),
+        passes: passes.rows[0].n,
+        members: members.rows[0].n,
+        active_schedules: schedules.rows[0].n,
+      });
+    }
+    res.json(out);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/admin/foreign-brands/silence-schedules', async (req, res) => {
+  try {
+    if (!isUserAdmin(req)) return res.status(403).json({ error: 'Solo admin piattaforma' });
+    const { brandAllowedOnDeploy } = require('./deploy-lock');
+    const ids = (await listBrands()).filter((b) => !brandAllowedOnDeploy(b)).map((b) => b.id);
+    if (!ids.length) return res.json({ silenced: 0 });
+    const r = await pool.query(
+      'UPDATE scheduled_push SET active = false WHERE active = true AND brand_id = ANY($1) RETURNING id',
+      [ids]
+    );
+    res.json({ silenced: r.rows.length });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/admin/foreign-brands/:id', async (req, res) => {
+  try {
+    if (!isUserAdmin(req)) return res.status(403).json({ error: 'Solo admin piattaforma' });
+    const { brandAllowedOnDeploy } = require('./deploy-lock');
+    const brand = await getBrand(req.params.id);
+    if (!brand) return res.status(404).json({ error: 'Brand non trovato' });
+    // Guardia dura: da qui si eliminano SOLO brand fuori linea, mai quelli HR.
+    if (brandAllowedOnDeploy(brand)) {
+      return res.status(403).json({ error: 'Questo brand appartiene al deploy: eliminalo dal flusso standard' });
+    }
+    await deleteBrand(brand.id);
+    res.json({ success: true, deleted: brand.name });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/brands', async (req, res) => {
   try {
     let brands = await listBrands();

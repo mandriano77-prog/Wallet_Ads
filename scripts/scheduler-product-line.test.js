@@ -25,3 +25,18 @@ test('scheduler: skip dei brand fuori linea prima di executeWalletPush (guardia 
   const execIdx = src.indexOf('await executeWalletPush');
   assert.ok(checkIdx > -1 && execIdx > -1 && checkIdx < execIdx, 'lo skip avviene PRIMA dell\'invio');
 });
+
+test('manutenzione archivio: endpoint admin con guardie giuste (sorgente)', () => {
+  const routes = fs.readFileSync(path.join(__dirname, '..', 'src/api/routes.js'), 'utf-8');
+  for (const ep of ['/admin/foreign-brands', 'silence-schedules']) {
+    assert.ok(routes.includes(ep), `endpoint ${ep} presente`);
+  }
+  const delIdx = routes.indexOf("router.delete('/admin/foreign-brands/:id'");
+  assert.ok(delIdx > -1, 'endpoint delete presente');
+  const delBlock = routes.slice(delIdx, delIdx + 1200);
+  assert.match(delBlock, /isUserAdmin\(req\)/, 'solo admin');
+  assert.match(delBlock, /brandAllowedOnDeploy\(brand\)/, 'guardia: mai eliminare brand del deploy');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'src/dashboard/index.html'), 'utf-8');
+  assert.match(html, /foreignBrandsCard/, 'pannello manutenzione in dashboard');
+  assert.match(html, /Elimina definitivamente/, 'azione con wording esplicito');
+});

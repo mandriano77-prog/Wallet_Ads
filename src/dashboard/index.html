@@ -3546,6 +3546,15 @@
                     <thead><tr><th>Nome</th><th>Email</th><th>Ruolo</th><th>Brand</th><th>Stato</th><th>Azioni</th></tr></thead>
                     <tbody></tbody>
                 </table>
+
+                <div id="foreignBrandsCard" style="margin-top:40px;display:none;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px;">
+                        <div class="sec-title" style="font-size:18px;margin-bottom:0;">Manutenzione archivio</div>
+                        <button type="button" class="btn small sec" id="silenceForeignBtn" onclick="silenceForeignSchedules()" style="display:none;">Silenzia tutte le programmate</button>
+                    </div>
+                    <p style="color:var(--text2);font-size:13px;margin-bottom:12px;">Brand di altre linee di prodotto (era Ads2Wallet) rimasti nel database: invisibili nel resto della dashboard, lo scheduler li ignora. Da qui puoi eliminarli definitivamente.</p>
+                    <div id="foreignBrandsList"></div>
+                </div>
             </div>
 
         </main>
@@ -14987,8 +14996,68 @@ async function savePassDesign() {
 // AI strip functions removed
 
 // ==================== USERS ====================
+async function loadForeignBrands() {
+    const card = document.getElementById('foreignBrandsCard');
+    if (!card) return;
+    if (!currentUser || normalizeRoleClient(currentUser.role) !== 'admin') { card.style.display = 'none'; return; }
+    try {
+        const res = await fetch(`${API}/admin/foreign-brands`, { headers: getAuthHeaders() });
+        if (!res.ok) { card.style.display = 'none'; return; }
+        const list = await res.json();
+        card.style.display = 'block';
+        const btn = document.getElementById('silenceForeignBtn');
+        const anySchedules = list.some(b => b.active_schedules > 0);
+        if (btn) btn.style.display = anySchedules ? 'inline-flex' : 'none';
+        const host = document.getElementById('foreignBrandsList');
+        if (!list.length) {
+            host.innerHTML = '<p style="color:var(--green);font-size:13px;">✓ Nessun residuo: archivio pulito.</p>';
+            return;
+        }
+        host.innerHTML = `<table class="table table-keep-actions"><thead><tr><th>Brand</th><th>Linea</th><th>Pass</th><th>Membri</th><th>Programmate attive</th><th>Azioni</th></tr></thead><tbody>` +
+            list.map(b => `<tr>
+                <td><strong>${esc(b.name)}</strong><div style="font-size:11px;color:var(--text2);">${esc(b.slug || b.id)}</div></td>
+                <td>${esc(b.product_line)}</td>
+                <td>${b.passes}</td>
+                <td>${b.members}</td>
+                <td>${b.active_schedules > 0 ? `<span style="color:var(--orange);font-weight:600;">${b.active_schedules}</span>` : '0'}</td>
+                <td><button class="btn small danger" onclick="deleteForeignBrand('${esc(b.id)}', '${esc(b.name)}')">Elimina definitivamente</button></td>
+            </tr>`).join('') + '</tbody></table>';
+    } catch (_) { card.style.display = 'none'; }
+}
+
+function normalizeRoleClient(r) { return String(r || '').trim().toLowerCase(); }
+
+async function silenceForeignSchedules() {
+    const ok = typeof window.appConfirm === 'function'
+        ? await window.appConfirm({ title: 'Silenziare le programmate?', message: 'Tutte le push programmate dei brand fuori linea verranno disattivate. I brand e i loro dati restano.', confirmLabel: 'Silenzia' })
+        : confirm('Silenziare tutte le programmate dei brand fuori linea?');
+    if (!ok) return;
+    try {
+        const res = await fetch(`${API}/admin/foreign-brands/silence-schedules`, { method: 'POST', headers: getAuthHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Errore');
+        toast(`${data.silenced} programmate silenziate`);
+        loadForeignBrands();
+    } catch (e) { toast('Errore: ' + e.message); }
+}
+
+async function deleteForeignBrand(id, name) {
+    const ok = typeof window.appConfirm === 'function'
+        ? await window.appConfirm({ title: `Eliminare "${name}"?`, message: 'Eliminazione DEFINITIVA: brand, pass, membri, programmate e storico. I pass già nei Wallet smetteranno di aggiornarsi. Non reversibile.', confirmLabel: 'Elimina definitivamente' })
+        : confirm(`Eliminare DEFINITIVAMENTE il brand "${name}" e tutti i suoi dati?`);
+    if (!ok) return;
+    try {
+        const res = await fetch(`${API}/admin/foreign-brands/${encodeURIComponent(id)}`, { method: 'DELETE', headers: getAuthHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Errore');
+        toast(`Brand "${name}" eliminato`);
+        loadForeignBrands();
+    } catch (e) { toast('Errore: ' + e.message); }
+}
+
 async function loadUsers() {
     if (!canManageDashboardUsers()) return;
+    loadForeignBrands(); // manutenzione archivio (solo admin, fire-and-forget)
     if (typeof fdLoadUsers === 'function' && (isFiloOperationalHome() || (typeof isHrDashboard === 'function' && isHrDashboard()))) {
         return fdLoadUsers();
     }
