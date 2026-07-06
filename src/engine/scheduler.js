@@ -12,6 +12,7 @@ const {
 } = require('../db');
 const { closeApnsSession } = require('./apns');
 const { executeWalletPush } = require('./push-dispatch');
+const { brandAllowedOnDeploy, brandProductLine } = require('../api/deploy-lock');
 const { normalizeHrPushPayload, resolvePushScreenAlert } = require('./push-text-limits');
 
 /**
@@ -111,6 +112,20 @@ async function executeScheduledPush(schedule, baseUrl) {
   const brand = await getBrand(brand_id);
   if (!brand) {
     console.error(`Brand ${brand_id} not found, skipping`);
+    return;
+  }
+
+  // Deploy HR-only: le programmate dei brand fuori linea (es. residui era
+  // Ads2Wallet nello stesso DB) NON partono da qui. La dashboard li nasconde
+  // (filtro /brands), quindi senza questo skip spingerebbero in silenzio per
+  // sempre, senza che nessuno possa vederle o fermarle.
+  if (!brandAllowedOnDeploy(brand)) {
+    console.warn(`[scheduler] SKIP programmata "${title}" — brand ${brand.name || brand_id} (${brandProductLine(brand)}) fuori dalla linea di prodotto del deploy`);
+    await logEvent({
+      brand_id,
+      event_type: 'scheduled_push_skipped_product_line',
+      metadata: { title, schedule_id: schedule.id, product_line: brandProductLine(brand) },
+    });
     return;
   }
 
